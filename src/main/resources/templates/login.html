@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="css/styleLogin.css">
+    <title>Página de Login</title>
+</head>
+<body>
+    <header>
+        <figure>
+            <img class="imagens-site" id="imgTopo" src="img/SENAI_2024-negativada.png" alt="Logo SENAI">
+        </figure>
+    </header>
+
+    <br>
+
+<div class="container">
+    <div class="heading">Login</div>
+    <!-- Envio direto para o Spring Security -->
+    <form id="loginForm" class="form" th:action="@{/login}" method="POST">
+        <!-- Usando os nomes esperados pelo Spring Security -->
+        <input required class="input" type="text" id="username" name="username" placeholder="E-mail">
+        <input required class="input" type="password" id="password" name="password" placeholder="Senha">
+        <input class="login-button" type="submit" value="Entrar">
+    </form>
+    <img id="logoEA" src="img/EA-2.jpg" alt="foto ilustrativa">
+</div>
+
+<!-- Card interativo inserido fora do modal de login -->
+<div class="card-container">
+    <div class="card">
+        <div class="front-content">
+            <p>O que fazemos?</p>
+        </div>
+        <div class="content">
+            <p class="heading-card">Emissão Acústica</p>
+            <p>
+                <strong>
+                A Emissão Acústica detecta falhas em materiais via ondas sonoras, 
+                permitindo avaliação em tempo real e garantindo segurança, eficiência e redução de custos.
+                </strong>
+            </p>
+        </div>
+    </div>
+</div>
+<!-- Card à esquerda -->
+<div class="card-container-left">
+    <div class="card">
+        <div class="front-content">
+            <p>Quem somos nós?</p>
+        </div>
+        <div class="content">
+            <p class="heading-card">Nossa Equipe</p>
+            <p>
+                <strong>
+                A Emissão Acústica é essencial para avaliar a integridade estrutural em tempo real, 
+                identificar danos precocemente e aplicar manutenções preventivas, aumentando a segurança,
+                eficiência e vida útil dos equipamentos, além de reduzir custos com reparos emergenciais.
+                </strong>
+            </p>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

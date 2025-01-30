@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/styleGraficos.css">
+    <title>Dashboard de Relatórios</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+
+<body>
+    <div class="wrapper">
+        <header>
+            <br>
+            <figure>
+                <img class="imagens-site" id="imgTopo" src="/img/SENAI_2024_completa_negativada.png" alt="Logo SENAI">
+            </figure>
+        </header>
+    </div>
+    
+    <main class="container"> 
+        <!-- Gráfico de Visão Geral dos Relatórios -->
+        <section class="grafico-container">
+            <h2>Visão Geral dos Relatórios - Status</h2>
+            <div id="grafico-aprovados"></div>
+        </section>
+        <br><br>
+        
+        <!-- Gráfico de Distribuição Mensal -->
+        <section class="grafico-container">
+            <h2>Distribuição Mensal dos Relatórios - Vencimento</h2>
+            <!-- Adicionar filtros acima do gráfico -->
+            <section class="filtro-container">
+                <label for="filtro-anos"></label>
+                <select id="filtro-anos" class="filtro-select">
+                    <option value="padrao" selected>Padrão</option>
+                    <!-- Anos serão preenchidos dinamicamente -->
+                </select>
+            
+                <label for="filtro-semestre"></label>
+                <select id="filtro-semestre" class="filtro-select">
+                    <option value="todos" selected>Todos</option>
+                    <option value="1">1º Semestre</option>
+                    <option value="2">2º Semestre</option>
+                </select>
+            </section>             
+            <br>
+            <div id="indice-anos" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <!-- O índice será preenchido dinamicamente -->
+            </div>
+            <div id="grafico-mensal"></div>
+        </section>
+        <br><br>
+        
+        <!-- Quantidade de Relatórios Realizados -->
+        <section class="grafico-container">
+            <div id="quantidade-relatorios"></div>
+        </section>
+        <br>
+    </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const empresaId = urlParams.get('empresaId');
+
+            if (!empresaId || isNaN(empresaId)) {
+                console.error('Erro: empresaId não é válido.');
+                return;
+            }
+
+            const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+            // Gráfico de Visão Geral dos Relatórios
+            fetch(`/api/pdfs/status?empresaId=${empresaId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar dados dos relatórios: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const totalRelatorios = data.reduce((acc, curr) => acc + curr.quantidade, 0);
+                    const dadosGrafico = data.map(item => ({
+                        estado: item.estado,
+                        quantidade: item.quantidade,
+                        porcentagem: (item.quantidade / totalRelatorios) * 100
+                    }));
+                    criarGrafico(dadosGrafico);
+                })
+                .catch(error => console.error('Erro ao carregar dados dos relatórios:', error));
+
+            const filtroAnos = document.getElementById('filtro-anos');
+            const filtroSemestre = document.getElementById('filtro-semestre');
+
+            const currentYear = new Date().getFullYear();
+            const minYear = currentYear - 1; // Ano passado
+            const maxYear = currentYear + 1; // Ano que vem
+
+            // Preenche o filtro de anos com a opção "Padrão"
+            function carregarAnos(dados) {
+                const anos = [...new Set(dados.map(d => parseInt(d.mes.split("-")[0])))];
+                anos.forEach(ano => {
+                    if (ano >= minYear && ano <= maxYear) {
+                        const option = document.createElement('option');
+                        option.value = ano;
+                        option.textContent = ano;
+                        filtroAnos.appendChild(option);
+                    }
+                });
+            }
+
+            // Filtra os dados com base nos filtros selecionados
+            function aplicarFiltros(dados) {
+                const anosSelecionados = Array.from(filtroAnos.selectedOptions).map(opt => opt.value);
+                const semestreSelecionado = filtroSemestre.value;
+
+                return dados.filter(d => {
+                    const [ano, mes] = d.mes.split("-");
+                    const mesInt = parseInt(mes);
+                    const semestre = mesInt <= 6 ? 1 : 2; // Determina o semestre
+
+                    const anoValido = anosSelecionados.includes("padrao") 
+                        ? parseInt(ano) >= minYear && parseInt(ano) <= maxYear
+                        : anosSelecionados.includes(ano);
+                    const semestreValido = semestreSelecionado === "todos" || semestre === parseInt(semestreSelecionado);
+
+                    return anoValido && semestreValido;
+                });
+            }
+
+            // Atualiza o gráfico com os dados filtrados
+            function atualizarGrafico(dados) {
+                const dadosFiltrados = aplicarFiltros(dados);
+                criarGraficoMensal(dadosFiltrados);
+            }
+
+            // Adiciona eventos aos filtros
+            filtroAnos.addEventListener('change', () => atualizarGrafico(dadosOriginais));
+            filtroSemestre.addEventListener('change', () => atualizarGrafico(dadosOriginais));
+
+            let dadosOriginais = [];
+
+            // Busca os dados e carrega o gráfico inicial
+            fetch(`/api/pdfs/quantidade-por-mes?empresaId=${empresaId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar a distribuição mensal: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    dadosOriginais = data;
+                    carregarAnos(data);
+                    atualizarGrafico(data);
+                })
+                .catch(error => console.error('Erro ao carregar a distribuição mensal:', error));
+
+            function criarGrafico(dados) {
+                const width = 300;
+                const height = 300;
+                const radius = Math.min(width, height) / 2;
+
+                d3.select("#grafico-aprovados").select("svg").remove();
+
+                const svg = d3.select("#grafico-aprovados")
+                    .append("svg")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .append("g")
+                    .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+                const color = d3.scaleOrdinal()
+                .domain(["aprovado", "reprovado", "pendente"])
+                .range(["#4CAF50", "#F44336", "#FFC107"]);
+
+
+                const pie = d3.pie()
+                    .value(d => d.quantidade);
+
+                const data_ready = pie(dados);
+
+                svg.selectAll('path')
+                    .data(data_ready)
+                    .enter()
+                    .append('path')
+                    .attr('d', d3.arc()
+                        .innerRadius(0)
+                        .outerRadius(radius))
+                    .attr('fill', d => color(d.data.estado))
+                    .attr("stroke", "#fff")
+                    .style("stroke-width", "2px");
+
+                svg.selectAll('text')
+                    .data(data_ready)
+                    .enter()
+                    .append('text')
+                    .text(d => `${d.data.estado}: ${d.data.porcentagem.toFixed(2)}%`)
+                    .attr("transform", d => `translate(${d3.arc().innerRadius(0).outerRadius(radius).centroid(d)})`)
+                    .style("text-anchor", "middle")
+                    .style("font-size", 15);
+            }
+
+            // Exibir Quantidade de Relatórios Realizados como texto simples
+            fetch(`/api/pdfs/quantidade?empresaId=${empresaId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar a quantidade de relatórios: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const divQuantidade = document.getElementById('quantidade-relatorios');
+                    divQuantidade.textContent = `Total de Relatórios Realizados: ${data}`;
+                })
+                .catch(error => console.error('Erro ao carregar a quantidade de relatórios:', error));
+
+            // Gráfico de Distribuição Mensal
+            fetch(`/api/pdfs/quantidade-por-mes?empresaId=${empresaId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao carregar a distribuição mensal: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    criarGraficoMensal(data);
+                })
+                .catch(error => console.error('Erro ao carregar a distribuição mensal:', error));
+
+                function criarGraficoMensal(dados) {
+                    d3.select("#grafico-mensal").select("svg").remove();
+
+                    const isMobile = window.innerWidth <= 400;
+                    const width = isMobile ? 800 : Math.min(window.innerWidth - 20, 360);
+                    const height = 300;
+                    const margin = { top: 60, right: 20, bottom: 60, left: 20 };
+
+                    const svg = d3.select("#grafico-mensal")
+                        .append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                        .append("g")
+                        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", 
+                                "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+                    // Define o ano atual e os limites
+                    const currentYear = new Date().getFullYear();
+                    const minYear = currentYear - 1; // Ano passado
+                    const maxYear = currentYear + 1; // Ano que vem
+
+                    // Filtra os dados para manter apenas anos no intervalo
+                    const dadosFiltrados = dados.filter(d => {
+                        const [ano] = d.mes.split("-");
+                        return parseInt(ano) >= minYear; // Inclui somente anos >= ano passado
+                    });
+
+                    // Processa os dados filtrados
+                    dadosFiltrados.forEach(d => {
+                        const [ano, mes] = d.mes.split("-");
+                        d.ano = parseInt(ano);
+                        d.mesAbrev = meses[parseInt(mes) - 1];
+                    });
+
+                    const x0 = d3.scaleBand()
+                        .domain(meses)
+                        .range([0, width])
+                        .padding(0.1);
+
+                    const x1 = d3.scaleBand()
+                        .domain([...new Set(dadosFiltrados.map(d => d.ano))])
+                        .range([0, x0.bandwidth()])
+                        .padding(0.05);
+
+                    const y = d3.scaleLinear()
+                        .domain([0, d3.max(dadosFiltrados, d => d.quantidade)]).nice()
+                        .range([height, 0]);
+
+                    // Define as cores para os anos no intervalo
+                    const colorMap = {
+                        [currentYear - 1]: "#4682b4", // Azul claro para o ano passado
+                        [currentYear]: "#003f5c", // Azul escuro para o ano atual
+                        [currentYear + 1]: "#ffa600", // Laranja para o próximo ano
+                    };
+
+                    const defaultColor = "#4CAF50"; // Verde para anos futuros fora do range
+
+                    // Preencher o índice de cores
+                    const indiceAnos = document.getElementById('indice-anos');
+                    indiceAnos.innerHTML = ''; // Limpa qualquer conteúdo anterior
+
+                    [...new Set(dadosFiltrados.map(d => d.ano))].forEach(ano => {
+                        const legenda = document.createElement('div');
+                        legenda.style.display = 'flex';
+                        legenda.style.alignItems = 'center';
+                        legenda.style.gap = '5px';
+
+                        const corQuadrado = document.createElement('div');
+                        corQuadrado.style.width = '20px';
+                        corQuadrado.style.height = '20px';
+                        corQuadrado.style.backgroundColor = colorMap[ano] || defaultColor; // Verde para anos fora do range
+
+                        const textoAno = document.createElement('span');
+                        textoAno.textContent = ano;
+
+                        legenda.appendChild(corQuadrado);
+                        legenda.appendChild(textoAno);
+                        indiceAnos.appendChild(legenda);
+                    });
+
+                    const maxValor = d3.max(dadosFiltrados, d => d.quantidade);
+
+                    let intervaloTick;
+                    if (maxValor <= 10) {
+                        intervaloTick = 1;
+                    } else if (maxValor <= 50) {
+                        intervaloTick = 5;
+                    } else {
+                        intervaloTick = 10;
+                    }
+
+                    svg.append("g")
+                        .call(
+                            d3.axisLeft(y)
+                                .ticks(Math.ceil(maxValor / intervaloTick))
+                                .tickFormat(d3.format("d"))
+                        )
+                        .selectAll("text")
+                        .style("font-size", "10px")
+                        .attr("dy", "-0.25em");
+
+                    svg.append("g")
+                        .attr("transform", `translate(0,${height})`)
+                        .call(d3.axisBottom(x0))
+                        .selectAll("text")
+                        .style("font-size", isMobile ? "10px" : "12px")
+                        .attr("transform", "rotate(-45)")
+                        .style("text-anchor", "end");
+
+                    svg.selectAll("g.mes")
+                        .data(dadosFiltrados)
+                        .enter()
+                        .append("g")
+                        .attr("transform", d => `translate(${x0(d.mesAbrev)}, 0)`)
+                        .selectAll("rect")
+                        .data(d => [d])
+                        .enter()
+                        .append("rect")
+                        .attr("x", d => x1(d.ano))
+                        .attr("y", d => y(d.quantidade))
+                        .attr("width", x1.bandwidth())
+                        .attr("height", d => height - y(d.quantidade))
+                        .attr("fill", d => colorMap[d.ano] || defaultColor); // Verde para anos fora do range
+
+                    svg.selectAll("g.mes")
+                        .selectAll("text")
+                        .data(dadosFiltrados)
+                        .enter()
+                        .append("text")
+                        .attr("x", d => x1(d.ano) + x1.bandwidth() / 2)
+                        .attr("y", d => y(d.quantidade) - 5)
+                        .attr("text-anchor", "middle")
+                        .style("fill", "#fff")
+                        .style("font-size", "10px")
+                        .text(d => d.quantidade)
+                        .style("visibility", d => d.quantidade < 3 ? "hidden" : "visible");
+                }
+
+        })
+    </script>
+    
+    <footer class="rodape">
+        <br>
+        <h3>R. Armogaste José da Silveira, 612 - St. Centro Oeste, Goiânia - GO, 74560-550 / CNPJ: 03.783.850/0018-40</h3>
+        <br>
+        <h3>- Central de Atendimento -</h3>
+        <h3>Consultora de Vendas | Denyse: (62) 99821-4019</h3>
+        <h3>Engenheiro Técnico Responsável | Cícero: (62) 99942-3246</h3>
+        <br>
+        <figure>
+            <img class="imagens-site" id="imgIST" src="/img/IST-nova.png" alt="logo IST">
+        </figure>
+    </footer>
+</body>
+</html>

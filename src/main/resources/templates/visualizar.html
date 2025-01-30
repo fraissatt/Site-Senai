@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/css/styleVisualizar.css">
+    <title>Visualização de PDFs</title>
+
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <style>
+        #searchInput {
+            margin-bottom: 10px;
+            padding: 8px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <header>
+            <br>
+            <figure>
+                <img class="imagens-site" id="imgTopo" src="/img/SENAI_2024_completa_negativada.png" alt="Logo SENAI">
+                <img class="imagens-site" id="imgIST1" src="/img/IST-nova.png" alt="logo IST">
+            </figure>
+        </header>
+    </div>
+
+    <section class="conteudo-topo" th:attr="data-empresa-id=${empresaId}">
+        <h2>Visualizar PDFs</h2>
+        <h3> Filtros </h3>
+        <!-- <button onclick="enviarNotificacoesParaPDFsExpirados()">Enviar Notificações</button> -->
+    </section>
+    
+
+    <section class="conteudo-pesquisa">
+
+        <button onclick="redirecionarParaGraficos()" id="btn-graficos">Ver Dashboard de Relatórios</button>
+        <br>
+        <br>
+        
+        <!-- Filtro de status -->
+        <label for="statusFilter"></label>
+        <select id="statusFilter" onchange="aplicarFiltros()">
+            <option value="">Validade</option>
+            <option value="ativo">Ativo</option>
+            <option value="prestes a vencer">Prestes a Vencer</option>
+            <option value="expirado">Expirado</option>
+        </select>
+
+        <!-- Filtro de Estado -->
+        <label for="estadoFilter"></label>
+        <select id="estadoFilter" onchange="aplicarFiltros()">
+            <option value="">Resultado</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="reprovado">Reprovado</option>
+        </select>
+
+        <!-- Filtro de Natureza -->
+        <label for="naturezaFilter"></label>
+        <select id="naturezaFilter" onchange="aplicarFiltros()">
+            <option value="">Tipo</option>
+            <option value="eaca">EA-CA</option>
+            <option value="eagd">EA-GD</option>
+            <option value="eeca">EE-CA</option>
+            <option value="eeepc">EE-EPC</option>
+            <option value="eeepi">EE-EPI</option>
+            <option value="eefe">EE-FE</option>
+        </select>
+
+        <div id="loading-indicator" style="display: none;">
+            <p>Carregando...</p>
+        </div>        
+
+        <br><br>
+        <input type="text" id="searchInput" placeholder="Buscar por nome do arquivo..." onkeyup="aplicarFiltros(this.value)">
+    </section>
+
+    <div id="mensagemPermissao" class="mensagem-permissao" style="display: none; color: red;">
+        Sem permissões para manipular dados.
+    </div>    
+
+    <!-- Botão de agendamento para mobile -->
+    <button class="bookmarkBtn" id="agendarBtn">
+        <span class="IconContainer">
+            <svg viewBox="0 0 384 512" height="0.9em" class="icon">
+                <path
+                    d="M0 48V487.7C0 501.1 10.9 512 24.3 512c5 0 9.9-1.5 14-4.4L192 400 345.7 507.6c4.1 2.9 9 4.4 14 4.4c13.4 0 24.3-10.9 24.3-24.3V48c0-26.5-21.5-48-48-48H48C21.5 0 0 21.5 0 48z"
+                ></path>
+            </svg>
+        </span>
+        <p class="text">Agendar</p>
+    </button>
+
+    <!-- Seção de agendamento que será exibida ao clicar no botão -->
+    <div class="agendamento-container" id="agendamentoSection">
+        <h3>Solicitar visita</h3>
+        <div>
+            <label for="data-agendamento">Selecione uma data:</label>
+            <input type="text" id="data-agendamento" placeholder="Escolha a data" />
+        </div>
+
+        <div id="horarios-disponiveis">
+            <label for="horarios">Horários Disponíveis:</label>
+            <select id="horarios">
+                <option value="" disabled selected>Selecione um horário</option>
+                <option value="08:00">8h às 10h</option>
+                <option value="10:00">10h às 12h</option>
+                <option value="13:00">13h às 15h</option>
+                <option value="15:00">15h às 17h</option>
+                <option value="17:00">17h às 19h</option>
+            </select>
+        </div>
+        
+
+        <button id="listar-solicitacoes">Lista de Solicitações</button>
+        <br>
+
+        <!-- Tabela de agendamentos -->
+        <div id="agendamentos-container" style="display: none; margin-top: 20px;">
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Hora</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="agendamentos-tbody">
+                    <!-- As linhas da tabela serão adicionadas aqui dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+        <br>
+            <button id="confirmar-agendamento">Confirmar Solicitação</button>
+        </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    
+    
+    <br><br>
+    <section class="conteudo" id="table-conteudo">
+        <h3>Arquivos PDF da Empresa</h3>
+        <br>
+        <!-- Botão de upload -->
+        <div th:if="${userRole == 'ROLE_ADMIN'}">
+            <input type="file" id="upload-btn" multiple accept=".pdf">
+        </div>
+        <br>
+        <div class="table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome do Arquivo</th>
+                        <th>Data de Validade</th>
+                        <th>Resultado</th>
+                        <th>Tipo</th>
+                        <th colspan="2">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-list">
+                    <!-- Linhas de PDF serão adicionadas aqui -->   
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div id="paginacao" class="paginacao"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const userRole = /*[[${userRole}]]*/ 'ROLE_CLIENTE';
+        const userEmpresaId = /*[[${userEmpresaId}]]*/ 'undefined';
+        /*]]>*/
+    </script>    
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const empresaId = window.location.pathname.split('/')[2];  
+            carregarPdfs(empresaId, 0);
+        });
+
+        function carregarPdfs(empresaId, page = 0, nome = '', status = '', estado = '', natureza = '') {
+            // Verifica se filtros estão aplicados
+            const isFilterApplied = nome || status || estado || natureza;
+
+            let url;
+
+            if (isFilterApplied) {
+                // Sem paginação para filtros aplicados
+                url = `/api/pdfs/empresa/${empresaId}/filtrar-sem-paginacao?` +
+                    `nome=${encodeURIComponent(nome)}&` +
+                    `status=${encodeURIComponent(status)}&` +
+                    `estado=${encodeURIComponent(estado)}&` +
+                    `natureza=${encodeURIComponent(natureza)}`;
+            } else {
+                // Com paginação para listagem padrão
+                url = `/api/pdfs/empresa/${empresaId}/buscar?` +
+                    `nome=${encodeURIComponent(nome)}&` +
+                    `page=${page}&size=7` +
+                    `&status=${encodeURIComponent(status)}&` +
+                    `estado=${encodeURIComponent(estado)}&` +
+                    `natureza=${encodeURIComponent(natureza)}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const pdfList = document.getElementById('pdf-list');
+                    pdfList.innerHTML = ''; // Limpa a lista antes de adicionar os PDFs
+                    const currentDate = new Date();
+
+                    // Verifica se a resposta contém conteúdo
+                    const pdfs = isFilterApplied ? data : data.content;
+
+                    if (pdfs && pdfs.length > 0) { // Verifica se existem PDFs na resposta
+                        pdfs.forEach(pdf => {
+                            const row = document.createElement('tr'); // Cria a linha da tabela
+
+                            // Verifica e define o ID da empresa para a linha
+                            const empresaId = pdf.empresa ? pdf.empresa.id : 'não definido';
+                            row.setAttribute('data-empresa-id', empresaId);
+
+                            let removeButton = '';
+                            let validadeField = '';
+                            let warningMessage = '';
+
+                            // Cálculo da validade
+                            const validadeDate = new Date(pdf.dataValidade);
+                            const diffTime = validadeDate - currentDate;
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                            const formattedDate = validadeDate.toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            });
+
+                            // Lógica de vencimento
+                            if (diffDays <= 30 && diffDays > 0) {
+                                row.classList.add('proximo-vencimento');
+                                warningMessage = `<span style="color: red; font-weight: bold;">(Vence em ${diffDays} dias)</span>`;
+                            } else if (diffDays <= 0) {
+                                row.classList.add('expirado');
+                                warningMessage = `<span style="color: white; font-weight: bold;">(Expirado)</span>`;
+                            } else {
+                                row.classList.add('OK');
+                                warningMessage = `<span style="color: white;">(OK)</span>`;
+                            }
+
+                            // Campos de remoção e validade condicionados ao ROLE_ADMIN
+                            if (userRole === 'ROLE_ADMIN') {
+                                removeButton = `<td><button class="btn remove-btn" data-id="${pdf.id}">Remover PDF</button></td>`;
+                                validadeField = `<td><input type="date" class="validade-field" data-id="${pdf.id}" value="${pdf.dataValidade || ''}"></td>`;
+                            } else {
+                                validadeField = `<td>${formattedDate || 'Sem validade definida'} ${warningMessage}</td>`;
+                            }
+
+                            // Campo de estado
+                            const estado = pdf.estado ? pdf.estado : 'nao-definido';
+                            const estadoField = userRole === 'ROLE_ADMIN' ? `
+                                <td class="estado">
+                                    <select id="estadoSelect_${pdf.id}" name="estadoSelect" onchange="atualizarEstado(${pdf.id})">
+                                        <option value="nao-definido" ${estado === 'nao-definido' ? 'selected' : ''}>Não Definido</option>
+                                        <option value="aprovado" ${estado === 'aprovado' ? 'selected' : ''}>Aprovado</option>
+                                        <option value="reprovado" ${estado === 'reprovado' ? 'selected' : ''}>Reprovado</option>
+                                    </select>
+                                </td>` : `<td class="estado">${estado}</td>`;
+
+                            // Campo de natureza
+                            const natureza = pdf.natureza ? pdf.natureza : 'nao-definida';
+                            const naturezaField = userRole === 'ROLE_ADMIN' ? `
+                                <td class="natureza">
+                                    <select id="naturezaSelect_${pdf.id}" name="naturezaSelect" onchange="atualizarNatureza(${pdf.id})">
+                                        <option value="eaca" ${natureza === 'eaca' ? 'selected' : ''}>EA-CA</option>
+                                        <option value="eagd" ${natureza === 'eagd' ? 'selected' : ''}>EA-GD</option>
+                                        <option value="eeca" ${natureza === 'eeca' ? 'selected' : ''}>EE-CA</option>
+                                        <option value="eeepc" ${natureza === 'eeepc' ? 'selected' : ''}>EE-EPC</option>
+                                        <option value="eeepi" ${natureza === 'eeepi' ? 'selected' : ''}>EE-EPI</option>
+                                        <option value="eefe" ${natureza === 'eefe' ? 'selected' : ''}>EE-FE</option>
+                                    </select>
+                                </td>` : `<td class="natureza">${natureza}</td>`;
+
+                            // Preenche a linha com os dados
+                            row.innerHTML = `
+                                <td>${pdf.fileName}</td>
+                                ${validadeField}
+                                ${estadoField}
+                                ${naturezaField}
+                                <td><a href="${pdf.filePath}" target="_blank" class="btn">Abrir PDF</a></td>
+                                ${removeButton}
+                            `;
+                            pdfList.appendChild(row);
+                        });
+                    } else {
+                        pdfList.innerHTML = '<tr><td colspan="6">Nenhum PDF disponível.</td></tr>';
+                    }
+
+                    // Atualiza a paginação somente se não houver filtros aplicados
+                    if (!isFilterApplied) {
+                        atualizarPaginacao(data.totalPages, page);
+                    }
+
+                    // Verifica no back-end se há PDFs "prestes a vencer"
+                    return fetch(`/api/pdfs/empresa/${empresaId}/verificar-prestes-a-vencer`);
+                })
+                .then(response => response.json())
+                .then(existemPDFs => {
+                    if (existemPDFs && sessionStorage.getItem("popupLido") !== "true") {
+                        mostrarPopup();
+                    }
+                })
+                .catch(error => console.error('Erro ao carregar PDFs:', error));
+        }
+
+
+
+        function atualizarPaginacao(totalPages, currentPage) {
+            const paginacaoContainer = document.getElementById('paginacao');
+            paginacaoContainer.innerHTML = ''; // Limpa paginação existente
+
+            for (let i = 0; i < totalPages; i++) {
+                const button = document.createElement('button');
+                button.textContent = i + 1;
+                button.disabled = i === currentPage; // Desativa o botão da página atual
+                
+                // Captura empresaId corretamente
+                const empresaId = window.location.pathname.split('/')[2];
+                
+                button.onclick = () => carregarPdfs(empresaId, i); // Garante que page é um número
+                paginacaoContainer.appendChild(button);
+            }
+        }
+
+        function aplicarFiltros(nome = '') {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'block'; // Mostra o indicador
+            }
+
+            const empresaId = window.location.pathname.split('/')[2];
+            const status = document.getElementById('statusFilter').value || "";
+            const estado = document.getElementById('estadoFilter').value || "";
+            const natureza = document.getElementById('naturezaFilter').value || "";
+            const fileName = nome || document.getElementById('searchInput').value.trim();
+
+            const url = `/api/pdfs/empresa/${empresaId}/filtrar-sem-paginacao?` +
+                        `status=${encodeURIComponent(status)}&` +
+                        `estado=${encodeURIComponent(estado)}&` +
+                        `natureza=${encodeURIComponent(natureza)}&` +
+                        `fileName=${encodeURIComponent(fileName)}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    renderizarTabela(data);
+                    if (loadingIndicator) {
+                        loadingIndicator.style.display = 'none'; // Esconde o indicador
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar PDFs:', error);
+                    if (loadingIndicator) {
+                        loadingIndicator.style.display = 'none'; // Esconde o indicador em caso de erro
+                    }
+                });
+        }
+
+        function renderizarTabela(data) {
+            const pdfList = document.getElementById('pdf-list');
+            pdfList.innerHTML = ''; // Limpa a tabela atual
+            const currentDate = new Date();
+            let hasExpiringPdfs = false;
+
+            if (data.length > 0) {
+                data.forEach(pdf => {
+                    const row = document.createElement('tr');
+                    row.classList.add('pdf-row');
+
+                    let warningMessage = '';
+
+                    // Cálculo da validade
+                    const validadeDate = new Date(pdf.dataValidade);
+                    const diffTime = validadeDate - currentDate;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    const formattedDate = validadeDate.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+
+                    // Lógica de vencimento
+                    if (diffDays <= 30 && diffDays > 0) {
+                        hasExpiringPdfs = true;
+                        row.classList.add('proximo-vencimento');
+                        warningMessage = `<span style="color: red; font-weight: bold;">(Vence em ${diffDays} dias)</span>`;
+                    } else if (diffDays <= 0) {
+                        row.classList.add('expirado');
+                        warningMessage = `<span style="color: white; font-weight: bold;">(Expirado)</span>`;
+                    } else {
+                        row.classList.add('OK');
+                        warningMessage = `<span style="color: white;">(OK)</span>`;
+                    }
+
+                    // Campos adicionais (somente para ROLE_ADMIN)
+                    const validadeField = userRole === 'ROLE_ADMIN'
+                        ? `<td><input type="date" class="validade-field" data-id="${pdf.id}" value="${pdf.dataValidade || ''}"></td>`
+                        : `<td>${formattedDate || 'Sem validade definida'} ${warningMessage}</td>`;
+
+                    const estadoField = userRole === 'ROLE_ADMIN'
+                        ? `<td class="estado">
+                            <select id="estadoSelect_${pdf.id}" name="estadoSelect" onchange="atualizarEstado(${pdf.id})">
+                                <option value="nao-definido" ${pdf.estado === 'nao-definido' ? 'selected' : ''}>Não Definido</option>
+                                <option value="aprovado" ${pdf.estado === 'aprovado' ? 'selected' : ''}>Aprovado</option>
+                                <option value="reprovado" ${pdf.estado === 'reprovado' ? 'selected' : ''}>Reprovado</option>
+                            </select>
+                        </td>`
+                        : `<td class="estado">${pdf.estado || 'Não definido'}</td>`;
+
+                    const naturezaField = userRole === 'ROLE_ADMIN'
+                        ? `<td class="natureza">
+                            <select id="naturezaSelect_${pdf.id}" name="naturezaSelect" onchange="atualizarNatureza(${pdf.id})">
+                                <option value="eaca" ${pdf.natureza === 'eaca' ? 'selected' : ''}>EA-CA</option>
+                                <option value="eagd" ${pdf.natureza === 'eagd' ? 'selected' : ''}>EA-GD</option>
+                                <option value="eeca" ${pdf.natureza === 'eeca' ? 'selected' : ''}>EE-CA</option>
+                                <option value="eeepc" ${pdf.natureza === 'eeepc' ? 'selected' : ''}>EE-EPC</option>
+                                <option value="eeepi" ${pdf.natureza === 'eeepi' ? 'selected' : ''}>EE-EPI</option>
+                                <option value="eefe" ${pdf.natureza === 'eefe' ? 'selected' : ''}>EE-FE</option>
+                            </select>
+                        </td>`
+                        : `<td class="natureza">${pdf.natureza || 'Não definida'}</td>`;
+
+                    const removeButton = userRole === 'ROLE_ADMIN'
+                        ? `<td><button class="btn remove-btn" data-id="${pdf.id}">Remover PDF</button></td>`
+                        : '';
+
+                    // Preenche a linha com os dados
+                    row.innerHTML = `
+                        <td>${pdf.fileName}</td>
+                        ${validadeField}
+                        ${estadoField}
+                        ${naturezaField}
+                        <td><a href="${pdf.filePath}" target="_blank" class="btn">Abrir PDF</a></td>
+                        ${removeButton}
+                    `;
+                    pdfList.appendChild(row);
+                });
+
+                if (hasExpiringPdfs && sessionStorage.getItem("popupLido") !== "true") {
+                    mostrarPopup();
+                }
+            } else {
+                pdfList.innerHTML = '<tr><td colspan="6">Nenhum arquivo encontrado.</td></tr>';
+            }
+        }
+
+
+        function validarPermissao(event, acaoPermitida) {
+            if (userRole === 'ROLE_STAKEHOLDER') {
+                event.preventDefault(); // Impede a ação padrão
+                exibirMensagemPermissao(); // Exibe a mensagem de permissão
+                return;
+            }
+            // Se o usuário tiver permissão, executa a função passada como parâmetro
+            if (typeof acaoPermitida === "function") {
+                acaoPermitida();
+            }
+        }
+
+        function mostrarPopup() {
+
+            // Verifica o estado do popup apenas uma vez, sem resetar em cada execução de carregarPdfs
+            if (sessionStorage.getItem("popupLido") === "true") {
+                return;
+            }
+
+            // Código do Pop-Up continua aqui
+            const popupHTML = `
+                <div class="popup-container">
+                    <div class="header">
+                        <span class="icon">
+                            <svg fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path clip-rule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.382l6.553 3.276A1 1 0 0018 15V3z" fill-rule="evenodd"></path>
+                            </svg>
+                        </span>
+                        <p class="alert">Laudo(s) prestes a vencer!</p>
+                    </div>
+                    <p class="message">Por favor, revise-os no filtro "Status" e nos contate em nosso WhatsApp no canto da tela.</p>
+                    <div class="actions">
+                        <button class="mark-as-read" id="fechar-popup">Marcar como lido</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML("beforeend", popupHTML);
+            const popup = document.querySelector(".popup-container");
+            popup.style.display = "block";
+
+            // Atualiza sessionStorage somente quando o usuário marca o Pop-Up como lido
+            document.getElementById("fechar-popup").addEventListener("click", () => {
+                popup.style.display = "none";
+                sessionStorage.setItem("popupLido", "true");
+            });
+        }
+
+        function atualizarEstado(pdfId) {
+            const selectElement = document.getElementById(`estadoSelect_${pdfId}`);
+            const novoEstado = selectElement.value;
+
+            fetch(`/api/pdfs/${pdfId}/estado`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ estado: novoEstado })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao atualizar estado');
+                }
+                return response.text();
+            })
+            .then(data => {
+                const empresaId = window.location.pathname.split('/')[2];  // Obtém o ID da empresa
+                carregarPdfs(empresaId);  // Recarrega a lista de PDFs para refletir a atualização
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar estado:', error);
+            });
+        }
+
+        function atualizarNatureza(pdfId) {
+            const selectElement = document.getElementById(`naturezaSelect_${pdfId}`);
+            const novaNatureza = selectElement.value;
+
+            fetch(`/api/pdfs/${pdfId}/natureza`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ natureza: novaNatureza })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao atualizar natureza');
+                }
+                return response.text();
+            })
+            .then(data => {
+                const empresaId = window.location.pathname.split('/')[2];  // Obtém o ID da empresa
+                carregarPdfs(empresaId);  // Recarrega a lista de PDFs para refletir a atualização
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar natureza:', error);
+            });
+        }
+
+
+        document.addEventListener('change', function(event) {
+            if (event.target.classList.contains('validade-field')) {
+                const pdfId = event.target.getAttribute('data-id');
+                const dataValidade = event.target.value;
+
+                fetch(`/api/pdfs/${pdfId}/validade`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'text/plain' },  // Content-Type ajustado para 'text/plain'
+                    body: dataValidade  // Envia a data diretamente, sem JSON.stringify
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Erro ao atualizar data de validade");
+                    }
+                    alert("Data de validade atualizada com sucesso!");
+                })
+                .catch(error => console.error('Erro ao atualizar data de validade:', error));
+            }
+        });
+
+        
+        // Verifica se a data inserida está no formato correto antes de enviar
+        function validarData(data) {
+            const regex = /^\d{4}-\d{2}-\d{2}$/;  // Formato YYYY-MM-DD
+            return regex.test(data);
+        }
+
+        // Função para fazer o upload dos PDFs
+        const uploadBtn = document.getElementById('upload-btn');
+        if (uploadBtn) {
+            // Define a função handleUpload separadamente para reutilizá-la
+            const handleUpload = function(event) {
+                const empresaId = window.location.pathname.split('/')[2];  // Obtém o ID da empresa da URL
+                const files = event.target.files;
+                const formData = new FormData();
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    formData.append('file', file);
+                }
+
+                fetch(`/api/pdfs/upload/${empresaId}`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.status === 409) {
+                        // Arquivo duplicado - exibir aviso ao usuárioyy
+                        showAlert("Erro: Um arquivo com o mesmo nome já existe! Por favor, renomeie ou selecione outro arquivo.");
+                        throw new Error("Arquivo duplicado");  // Impede o fluxo de sucesso de continuar
+                    } else if (!response.ok) {
+                        throw new Error("Erro ao fazer upload do PDF");
+                    }
+                    return response.json();
+                })
+                .then(() => {
+                    alert("PDF carregado com sucesso!");
+                    carregarPdfs(empresaId);  // Atualiza a lista de PDFs após o upload
+                })
+                .catch(error => {
+                    console.error('Erro ao fazer upload do PDF:', error);
+                    showAlert("Erro: Um arquivo com o mesmo nome já existe! Por favor, renomeie ou selecione outro arquivo.");
+                });
+            };
+
+            // Remove o event listener existente, se houver, e adiciona o novo
+            uploadBtn.removeEventListener('change', handleUpload); // Remove o listener existente
+            uploadBtn.addEventListener('change', handleUpload); // Adiciona o listener novamente
+        }
+
+
+        // Função para exibir uma mensagem de alerta na tela
+        function showAlert(message) {
+            if (!document.querySelector('.alert')) { // Verifica se o alerta já não existe
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert';
+                alertDiv.innerHTML = `<strong>${message}</strong>`;
+                document.body.prepend(alertDiv);
+
+                // Remove o alerta após 5 segundos
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 5000);
+            }
+        }
+
+
+        // Função para remover PDFs
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('remove-btn')) {
+                const pdfId = event.target.getAttribute('data-id');
+
+                fetch(`/api/pdfs/${pdfId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Erro ao remover PDF");
+                    }
+                    // Remove a linha da tabela correspondente ao PDF excluído
+                    event.target.closest('tr').remove(); // remove a linha inteira do DOM
+                    alert("PDF removido com sucesso!");
+                })
+                .catch(error => console.error('Erro ao remover PDF:', error));
+            }
+        });
+
+        function enviarNotificacoesParaPDFsExpirados() {
+            const pdfsFiltrados = obterPDFsExpiradosOuPrestesAVencer();
+
+            if (pdfsFiltrados.length > 0) {
+                fetch('/api/notificacao/enviar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(pdfsFiltrados) // Enviando a lista de PDFs ao back-end
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Notificações enviadas com sucesso!");
+                    } else {
+                        alert("Falha ao enviar notificações.");
+                    }
+                })
+                .catch(error => {   
+                    console.error("Erro ao enviar notificações: ", error);
+                });
+            } else {
+                alert("Nenhum PDF está prestes a vencer ou expirado.");
+            }
+        }
+
+
+        function obterPDFsExpiradosOuPrestesAVencer() {
+            const pdfsFiltrados = [];
+            const rows = document.querySelectorAll('#pdf-list tr');
+            const currentDate = new Date();
+
+            rows.forEach(row => {
+                const validadeField = row.querySelector('input.validade-field');  // Captura o input de validade
+
+                if (validadeField && validadeField.value) {
+                    const validadeDate = new Date(validadeField.value + 'T00:00:00');  // Inclui 'T00:00:00' para garantir o formato correto
+                    const diffTime = validadeDate - currentDate;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays <= 30) {
+                        const pdfId = row.querySelector('.btn.remove-btn').getAttribute('data-id');
+                        const empresaId = row.getAttribute('data-empresa-id');  // Certifique-se de que o atributo data-empresa-id está presente
+                        const fileName = row.querySelector('td:first-child').textContent.trim();
+
+                        pdfsFiltrados.push({ id: pdfId, fileName: fileName, empresaId: empresaId });
+                    }
+                }
+            });
+
+            return pdfsFiltrados;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataInput = document.getElementById('data-agendamento');
+
+            fetch('/api/agendamentos/datas-indisponiveis')
+                .then(response => response.json())
+                .then(datasIndisponiveis => {
+                    // Configura o calendário com os dias indisponíveis em vermelho
+                    flatpickr("#data-agendamento", {
+                        altInput: true,
+                        altFormat: "j F, Y", // Formato amigável
+                        dateFormat: "Y-m-d", // Formato padrão para envio ao back-end
+                        minDate: "today", // Impede a seleção de datas anteriores
+                        disable: datasIndisponiveis.map(data => {
+                            return {
+                                from: data.data, // Data inicial
+                                to: data.data // Data final
+                            };
+                        }),
+                        locale: {
+                            firstDayOfWeek: 1 // Define segunda-feira como início da semana
+                        },
+                        onReady: function(selectedDates, dateStr, instance) {
+                            // Força o placeholder quando o Flatpickr é carregado
+                            instance.altInput.setAttribute("placeholder", "Escolha a data");
+                        },
+                        onChange: function(selectedDates, dateStr, instance) {
+                            // Remove o placeholder ao selecionar uma data
+                            if (instance.altInput.value !== "") {
+                                instance.altInput.removeAttribute("placeholder");
+                            }
+                            // Chama a função para atualizar os horários indisponíveis
+                            atualizarHorariosIndisponiveis(dateStr);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error("Erro ao carregar as datas indisponíveis:", error);
+                });
+
+            // Lógica para exibir a área de agendamento ao clicar no botão
+            document.getElementById("agendarBtn").addEventListener("click", function() {
+                var agendamentoSection = document.getElementById("agendamentoSection");
+                if (agendamentoSection.style.display === "none" || agendamentoSection.style.display === "") {
+                    agendamentoSection.style.display = "block";
+                } else {
+                    agendamentoSection.style.display = "none";
+                }
+            });
+
+            function atualizarHorariosIndisponiveis(dataSelecionada) {
+                console.log("Data enviada ao back-end:", dataSelecionada); // Verificar a data enviada
+
+                fetch(`/api/agendamentos/horarios-indisponiveis?data=${dataSelecionada}`)
+                    .then(response => response.json())
+                    .then(horariosIndisponiveis => {
+                        console.log("Horários indisponíveis recebidos do back-end:", horariosIndisponiveis); // Verificar retorno
+
+                        const horariosSelect = document.getElementById('horarios');
+
+                        // Resetar estilos e habilitar todos os horários inicialmente
+                        Array.from(horariosSelect.options).forEach(option => {
+                            option.disabled = false;
+                            option.style.color = ''; // Reseta a cor
+                        });
+
+                        // Desabilitar horários indisponíveis e destacá-los em vermelho
+                        horariosIndisponiveis.forEach(horarioIndisponivel => {
+                            const option = Array.from(horariosSelect.options).find(opt => opt.value === horarioIndisponivel);
+                            if (option) {
+                                option.disabled = true;
+                                option.style.color = 'red';
+                            }
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Erro ao carregar horários indisponíveis:", error);
+                    });
+            }
+
+            function exibirMensagemPermissao() {
+                const mensagemPermissao = document.getElementById('mensagemPermissao');
+                mensagemPermissao.style.display = 'block';
+                setTimeout(() => {
+                    mensagemPermissao.style.display = 'none';
+                }, 3000);
+            }
+
+            function buscarAgendamentos() {
+                fetch('/api/agendamentos/meus-agendamentos', {
+                    method: 'GET',
+                })
+                .then(response => response.json())
+                .then(agendamentos => {
+                    const agendamentosContainer = document.getElementById('agendamentos-container');
+                    agendamentosContainer.innerHTML = ''; // Limpar container
+
+                    agendamentos.forEach(agendamento => {
+                        const agendamentoDiv = document.createElement('div');
+                        agendamentoDiv.innerHTML = `
+                            <p>Data: ${agendamento.data_hora}</p>
+                            <p>Status: ${agendamento.status}</p>
+                        `;
+                        agendamentosContainer.appendChild(agendamentoDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error("Erro ao buscar os agendamentos:", error);
+                    alert("Erro ao buscar os agendamentos.");
+                });
+            }
+
+            function reservarAgendamento() {
+                const empresaIdNaPagina = document.querySelector(".conteudo-topo").getAttribute("data-empresa-id");
+                const empresaIdPagina = parseInt(empresaIdNaPagina, 10); // Converte para número
+                const usuarioEmpresaId = parseInt(userEmpresaId, 10);    // Converte para número
+
+                // Verifica se o usuário é STAKEHOLDER e se a empresa da página é diferente da empresa do usuário
+                if (userRole === 'ROLE_STAKEHOLDER' && empresaIdPagina !== usuarioEmpresaId) {
+                    exibirMensagemPermissao(); // Exibe a mensagem de permissão negada
+                    return;
+                }
+
+                const horario = document.getElementById('horarios').value;
+                const dataSelecionada = document.getElementById('data-agendamento').value;
+
+                // Validação de horário e data
+                if (!dataSelecionada) {
+                    alert("Por favor, selecione uma data.");
+                    return;
+                }
+
+                if (horario === "") {
+                    alert("Selecione um horário válido.");
+                    return;
+                }
+
+                fetch('/api/agendamentos/reservar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        data: dataSelecionada,
+                        horario: horario
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text) });
+                    }
+                    return response.text();
+                })
+                .then(result => {
+                    alert(result);
+                    buscarAgendamentos();  // Atualiza a lista de agendamentos após confirmar
+                })
+                .catch(error => {
+                    alert("Erro: " + error.message);
+                });
+            }
+
+            document.getElementById('confirmar-agendamento').addEventListener('click', reservarAgendamento);
+
+            // Carregar os agendamentos na página ao carregar
+            document.addEventListener('DOMContentLoaded', buscarAgendamentos);
+
+        })
+
+        document.getElementById('listar-solicitacoes').addEventListener('click', function() {
+            const agendamentosContainer = document.getElementById('agendamentos-container');
+
+            // Verifica se a lista está visível ou não
+            if (agendamentosContainer.style.display === 'block') {
+                agendamentosContainer.style.display = 'none';
+            } else {
+                fetch('/api/agendamentos/meus-agendamentos', {
+                    method: 'GET',
+                })
+                .then(response => response.json())
+                .then(agendamentos => {
+                    const agendamentosTbody = document.getElementById('agendamentos-tbody');
+                    
+                    // Limpa o conteúdo atual do corpo da tabela
+                    agendamentosTbody.innerHTML = '';
+
+                    // Itera sobre os agendamentos recebidos e adiciona uma linha para cada um
+                    agendamentos.forEach(agendamento => {
+                        const row = document.createElement('tr');
+                        const dataHora = new Date(agendamento.dataHora);
+
+                        // Formata a data e hora de forma legível
+                        const dataFormatada = dataHora.toLocaleDateString('pt-BR');
+                        const horaFormatada = dataHora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                        row.innerHTML = `
+                            <td>${dataFormatada}</td>
+                            <td>${horaFormatada}</td>
+                            <td>${agendamento.status}</td>
+                        `;
+                        agendamentosTbody.appendChild(row);
+                    });
+
+                    // Exibe o container da tabela
+                    agendamentosContainer.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error("Erro ao buscar os agendamentos:", error);
+                    alert("Erro ao buscar os agendamentos.");
+                });
+            }
+        });
+
+        function redirecionarParaGraficos() {
+            const empresaId = window.location.pathname.split('/')[2];  // Assume que o empresaId está na URL
+            if (empresaId) {
+                window.location.href = `/visualizar/graficos?empresaId=${empresaId}`;
+            } else {
+                console.error('Erro: empresaId não encontrado.');
+            }
+        }
+
+    </script>
+
+    <br><br>
+
+    <!-- Botão flutuante de WhatsApp -->
+    <div class="whatsapp-float">
+        <button class="Btn" onclick="window.open('https://api.whatsapp.com/send?phone=5562999423246&text=Olá, gostaria de mais informações!', '_blank')">
+          <div class="sign">
+            <svg class="socialSvg whatsappSvg" viewBox="0 0 16 16">
+              <path
+                d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"
+              ></path>
+            </svg>
+          </div>
+          <div class="text">Whatsapp</div>
+        </button>
+    </div>
+      
+
+
+    <footer class="rodape">
+        <br>
+        <h3>R. Armogaste José da Silveira, 612 - St. Centro Oeste, Goiânia - GO, 74560-550 / CNPJ: 03.783.850/0018-40</h3>
+        <br>
+        <h3>- Central de Atendimento -</h3>
+        <h3>Consultora de Vendas | Denyse: (62) 99821-4019</h3>
+        <h3>Engenheiro Técnico Responsável | Cícero: (62) 99942-3246</h3>
+        <br>
+
+        <figure>
+            <img class="imagens-site" id="imgIST" src="/img/IST-nova.png" alt="logo IST">
+        </figure>
+    </footer>
+
+</body>
+</html>

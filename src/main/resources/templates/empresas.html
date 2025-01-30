@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/css/styleEmpresas.css">
+    <title>Empresas</title>
+</head>
+
+<body>
+<div class="wrapper">
+    <header>
+        <br>
+        <figure>
+            <img class="imagens-site" id="imgTopo" src="/img/SENAI_2024_completa_negativada.png" alt="Logo SENAI">
+            <img class="imagens-site" id="imgIST1" src="/img/IST-nova.png" alt="logo IST">
+        </figure>
+    </header>
+
+    <section class="conteudo-topo">
+        <h1>Empresas</h1>
+    </section>
+
+    <div class="container">
+        <h1>Lista de Empresas</h1>
+        <br>
+        <input type="text" id="buscaEmpresa" placeholder="Buscar empresa..." onkeyup="buscarEmpresa()">
+        <br>
+        <button id="adicionarEmpresaBtn" onclick="abrirModal()">Adicionar Empresa</button>
+        <div class="empresa-list" id="empresa-list">
+            <!-- Empresas serão listadas aqui -->
+        </div>
+        <div id="paginacao" class="paginacao">
+            <!-- Botões de paginação serão inseridos aqui via JavaScript -->
+        </div>   
+    </div>
+
+    <!-- Mensagem de Permissão -->
+    <div id="mensagemPermissao" class="mensagem-permissao" style="display: none; color: red;">
+        Sem permissões para alterar dados.
+    </div>
+
+    <!-- Modal para adicionar/editar empresa -->
+    <div id="modalAdicionarEmpresa" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal()">&times;</span>
+            <h2 id="modalTitle">Adicionar Nova Empresa</h2>
+            <br>
+            <form>
+                <div class="form-group">
+                    <label for="nomeEmpresa">Nome</label>
+                    <input type="text" id="nomeEmpresa" name="nomeEmpresa" required>
+                </div>
+                <div class="form-group">
+                    <label for="emailEmpresa">Email</label>
+                    <input type="email" id="emailEmpresa" name="emailEmpresa" required>
+                </div>
+                <div class="form-group">
+                    <label for="celularEmpresa">Celular</label>
+                    <input type="text" id="celularEmpresa" name="celularEmpresa" placeholder="(DDD) 9 0000-0000" required>
+                </div>
+                <div class="form-group">
+                    <label for="empresaEstado">Estado</label>
+                    <select id="empresaEstado" name="empresaEstado" required>
+                        <option value="N/C">Não Classificado</option>
+                        <option value="AC">AC</option>
+                        <option value="AL">AL</option>
+                        <option value="AP">AP</option>
+                        <option value="AM">AM</option>
+                        <option value="BA">BA</option>
+                        <option value="CE">CE</option>
+                        <option value="DF">DF</option>
+                        <option value="ES">ES</option>
+                        <option value="GO">GO</option>
+                        <option value="MA">MA</option>
+                        <option value="MT">MT</option>
+                        <option value="MS">MS</option>
+                        <option value="MG">MG</option>
+                        <option value="PA">PA</option>
+                        <option value="PB">PB</option>
+                        <option value="PR">PR</option>
+                        <option value="PE">PE</option>
+                        <option value="PI">PI</option>
+                        <option value="RJ">RJ</option>
+                        <option value="RN">RN</option>
+                        <option value="RS">RS</option>
+                        <option value="RO">RO</option>
+                        <option value="RR">RR</option>
+                        <option value="SC">SC</option>
+                        <option value="SP">SP</option>
+                        <option value="SE">SE</option>
+                        <option value="TO">TO</option>
+                    </select>
+                </div>                
+                <div class="form-group">
+                    <label for="visivelStakeholderCheckbox">Visível para Stakeholders</label>
+                    <input type="checkbox" id="visivelStakeholderCheckbox" name="visivelStakeholder">
+                </div>                
+                <div class="modal-buttons">
+                    <button id="salvarEmpresa-btn" type="button" onclick="salvarOuAtualizarEmpresa()">Salvar</button>
+                </div>
+            </form>
+        </div>     
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const userRole = /*[[${userRole}]]*/ 'ROLE_CLIENTE';
+        const userEmpresaId = /*[[${userEmpresaId}]]*/ 'undefined';
+        /*]]>*/
+    </script>
+    
+    <script>
+        let empresaEditando = null;
+
+        function abrirModal(isEdit = false) {
+            if (userRole === 'ROLE_STAKEHOLDER') {
+                exibirMensagemPermissao();
+                return;
+            }
+
+            const selectEstado = document.getElementById('empresaEstado');
+            const visivelStakeholderCheckbox = document.getElementById('visivelStakeholderCheckbox');
+
+            if (isEdit) {
+                document.getElementById('modalTitle').textContent = 'Editar Empresa';
+                document.getElementById('salvarEmpresa-btn').textContent = 'Atualizar';
+
+                if (!document.getElementById('excluirEmpresa-btn')) {
+                    const excluirBtn = document.createElement('button');
+                    excluirBtn.id = 'excluirEmpresa-btn';
+                    excluirBtn.textContent = 'Excluir';
+                    excluirBtn.style.backgroundColor = 'red';
+                    excluirBtn.onclick = excluirEmpresa;
+                    document.getElementById('salvarEmpresa-btn').parentElement.appendChild(excluirBtn);
+                }
+            } else {
+                document.getElementById('modalTitle').textContent = 'Adicionar Nova Empresa';
+                document.getElementById('salvarEmpresa-btn').textContent = 'Salvar';
+
+                // Resetar o estado para "Não Classificado"
+                if (selectEstado) {
+                    selectEstado.value = "N/C";
+                }
+
+                // Desmarcar a flag "Visível para Stakeholders"
+                if (visivelStakeholderCheckbox) {
+                    visivelStakeholderCheckbox.checked = false;
+                }
+
+                const excluirBtn = document.getElementById('excluirEmpresa-btn');
+                if (excluirBtn) {
+                    excluirBtn.remove();
+                }
+            }
+
+            // Abrir o modal
+            document.getElementById('modalAdicionarEmpresa').style.display = 'block';
+        }
+
+        function excluirEmpresa() {
+            if (empresaEditando) {
+                const empresaId = empresaEditando.dataset.id;
+
+                fetch(`/api/empresas/${empresaId}`, {
+                    method: 'DELETE'
+                })
+                .then(() => {
+                    empresaEditando.remove();
+                    fecharModal();
+                })
+                .catch(error => console.error('Erro ao excluir empresa:', error));
+            }
+        }
+
+        function fecharModal() {
+            document.getElementById('modalAdicionarEmpresa').style.display = 'none';
+            limparCampos();
+            empresaEditando = null;
+        }
+
+        function salvarOuAtualizarEmpresa() {
+            if (userRole === 'ROLE_STAKEHOLDER') {
+                exibirMensagemPermissao();
+                return;
+            }
+
+            // Captura os valores dos campos
+            const nomeEmpresa = document.getElementById('nomeEmpresa').value.trim();
+            const emailEmpresa = document.getElementById('emailEmpresa').value.trim();
+            const celularEmpresa = document.getElementById('celularEmpresa').value.trim();
+            const estadoEmpresa = document.getElementById('empresaEstado').value;
+
+            // Verifica se os campos obrigatórios estão preenchidos
+            if (!nomeEmpresa || !emailEmpresa || !celularEmpresa || estadoEmpresa === 'N/C') {
+                exibirMensagemErro('Preencha os campos obrigatórios, por favor.');
+                return;
+            }
+
+            const visivelStakeholder = document.getElementById('visivelStakeholderCheckbox')?.checked || false;
+
+            // Cria o objeto da empresa
+            const empresa = {
+                nomeEmpresa: nomeEmpresa,
+                email: emailEmpresa,
+                celular: celularEmpresa,
+                visivelStakeholder: visivelStakeholder,
+                empresaEstado: estadoEmpresa
+            };
+
+            // Define a URL e o método (POST para nova empresa, PUT para editar)
+            const url = empresaEditando ? `/api/empresas/${empresaEditando.dataset.id}` : '/api/empresas';
+            const method = empresaEditando ? 'PUT' : 'POST';
+
+            // Envia a requisição ao back-end
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(empresa)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao salvar empresa.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (empresaEditando) {
+                    // Atualiza os dados da empresa na lista
+                    empresaEditando.querySelector('.row:nth-child(1) .cell:nth-child(2)').textContent = data.nomeEmpresa;
+                    empresaEditando.querySelector('.row:nth-child(2) .cell:nth-child(2)').textContent = data.email;
+                    empresaEditando.querySelector('.row:nth-child(3) .cell:nth-child(2)').textContent = data.celular;
+                } else {
+                    // Adiciona a nova empresa na lista
+                    adicionarEmpresaNaLista(data);
+                }
+                fecharModal();
+            })
+            .catch(error => {
+                console.error('Erro ao salvar empresa:', error);
+                exibirMensagemErro('Erro ao salvar a empresa. Tente novamente.');
+            });
+        }
+
+        function exibirMensagemErro(mensagem) {
+            const modal = document.getElementById('modalAdicionarEmpresa');
+            const mensagemErro = document.getElementById('mensagemErro');
+
+            // Cria o elemento de mensagem, caso não exista
+            if (!mensagemErro) {
+                const erro = document.createElement('div');
+                erro.id = 'mensagemErro';
+                erro.style.color = 'red';
+                erro.style.marginTop = '10px';
+                modal.querySelector('.modal-content').appendChild(erro);
+            }
+
+            // Define o texto da mensagem de erro
+            document.getElementById('mensagemErro').textContent = mensagem;
+        }
+
+
+        function carregarEmpresas(page = 0, size = 20) {
+            fetch(`/api/empresas?page=${page}&size=${size}`)
+                .then(response => response.json())
+                .then(data => {
+                    const empresas = data.content; // Dados paginados
+                    const totalPages = data.totalPages; // Total de páginas
+
+                    // Atualizar a lista de empresas
+                    const empresaList = document.getElementById('empresa-list');
+                    empresaList.innerHTML = ''; // Limpar lista existente
+                    empresas.forEach(empresa => {
+                        adicionarEmpresaNaLista(empresa);
+                    });
+
+                    // Atualizar os botões de paginação
+                    atualizarPaginacao(totalPages, page);
+                })
+                .catch(error => console.error('Erro ao carregar empresas:', error));
+        }
+
+        function atualizarPaginacao(totalPages, currentPage) {
+            const paginacaoContainer = document.getElementById('paginacao');
+            paginacaoContainer.innerHTML = ''; // Limpar botões antigos
+
+            for (let i = 0; i < totalPages; i++) {
+                const button = document.createElement('button');
+                button.textContent = i + 1;
+                button.disabled = i === currentPage; // Desabilitar botão da página atual
+                button.onclick = () => carregarEmpresas(i); // Carregar a página correspondente
+                paginacaoContainer.appendChild(button);
+            }
+        }
+
+
+        function exibirMensagemPermissao() {
+            const mensagemPermissao = document.getElementById('mensagemPermissao');
+            if (!mensagemPermissao) {
+                console.error("Elemento 'mensagemPermissao' não encontrado no DOM.");
+                return;
+            }
+            mensagemPermissao.style.display = 'block';
+            setTimeout(() => {
+                mensagemPermissao.style.display = 'none';
+            }, 3000); // Oculta a mensagem após 3 segundos
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarEmpresas(0, 20);
+
+            if (userRole === 'ROLE_STAKEHOLDER') {
+                document.getElementById('adicionarEmpresaBtn').style.display = 'none';
+            }
+        });
+
+        function adicionarEmpresaNaLista(empresa) {
+            const lista = document.getElementById('empresa-list');
+            const novaEmpresa = document.createElement('div');
+            novaEmpresa.classList.add('empresa-item');
+            novaEmpresa.dataset.id = empresa.id;
+            novaEmpresa.setAttribute('data-visivel-stakeholder', empresa.visivelStakeholder);
+            novaEmpresa.setAttribute('data-estado', empresa.empresaEstado); // Adiciona o estado como atributo data
+
+            novaEmpresa.innerHTML = `
+                <div class="row">
+                    <div class="cell"><strong>Nome:</strong></div>
+                    <div class="cell"><strong>${empresa.nomeEmpresa}</strong></div>
+                </div>
+                <div class="row">
+                    <div class="cell"><strong>Email:</strong></div>
+                    <div class="cell">${empresa.email}</div>
+                </div>
+                <div class="row">
+                    <div class="cell"><strong>Celular:</strong></div>
+                    <div class="cell">${empresa.celular}</div>
+                </div>
+                <div class="button-group">
+                    <button class="editar-btn" onclick="editarEmpresa(this)">Editar</button>
+                    <button class="pdfs-btn" onclick="abrirPaginaPDF(this)">PDFs</button>
+                </div>
+            `;
+            lista.appendChild(novaEmpresa);
+        }
+
+        function limparCampos() {
+            document.getElementById('nomeEmpresa').value = '';
+            document.getElementById('emailEmpresa').value = '';
+            document.getElementById('celularEmpresa').value = '';
+        }
+
+        function abrirPaginaPDF(button) {
+            const empresaId = button.closest('.empresa-item').dataset.id;
+            window.location.href = `/visualizar/${empresaId}`;
+        }
+
+        function editarEmpresa(button) {
+            if (userRole === 'ROLE_STAKEHOLDER') {
+                exibirMensagemPermissao();
+                return;
+            }
+
+            // Obter a referência do item da empresa em edição
+            empresaEditando = button.closest('.empresa-item');
+
+            // Preencher os campos do modal com os dados da empresa
+            document.getElementById('nomeEmpresa').value = empresaEditando.querySelector('.row:nth-child(1) .cell:nth-child(2)').textContent.trim();
+            document.getElementById('emailEmpresa').value = empresaEditando.querySelector('.row:nth-child(2) .cell:nth-child(2)').textContent.trim();
+            document.getElementById('celularEmpresa').value = empresaEditando.querySelector('.row:nth-child(3) .cell:nth-child(2)').textContent.trim();
+
+            // Preencher o checkbox "Visível para Stakeholders"
+            const visivelStakeholderCheckbox = document.getElementById('visivelStakeholderCheckbox');
+            if (visivelStakeholderCheckbox) {
+                visivelStakeholderCheckbox.checked = empresaEditando.getAttribute('data-visivel-stakeholder') === 'true';
+            } else {
+                console.error("Checkbox 'visivelStakeholderCheckbox' não encontrado.");
+            }
+
+            // Preencher o estado selecionado no campo "empresaEstado"
+            const estadoEmpresa = empresaEditando.getAttribute('data-estado');
+            const selectEstado = document.getElementById('empresaEstado');
+            if (estadoEmpresa && selectEstado) {
+                selectEstado.value = estadoEmpresa;
+            } else {
+                console.error("O atributo 'data-estado' ou o campo 'empresaEstado' não foi encontrado.");
+            }
+
+            // Abrir o modal no modo de edição
+            abrirModal(true);
+        }
+
+        function buscarEmpresa() {
+            const termoBusca = document.getElementById('buscaEmpresa').value.trim();
+
+            // Verifica se o campo está vazio
+            if (!termoBusca) {
+                carregarEmpresas(0, 20); // Volta para a exibição paginada
+                document.getElementById('paginacao').style.display = 'block';
+                return;
+            }
+
+            // Codifica o termo antes de enviar a requisição
+            fetch(`/api/empresas/buscar?termo=${encodeURIComponent(termoBusca)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Erro na busca: " + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(empresas => {
+                    const empresaList = document.getElementById('empresa-list');
+                    empresaList.innerHTML = ''; // Limpa a lista atual
+                    empresas.forEach(empresa => adicionarEmpresaNaLista(empresa));
+                    document.getElementById('paginacao').style.display = 'none'; // Esconde a paginação
+                })
+                .catch(error => console.error('Erro ao buscar empresas:', error));
+        }
+
+
+    </script>
+
+    <footer class="rodape">
+        <br>
+        <h3>R. Armogaste José da Silveira, 612 - St. Centro Oeste, Goiânia - GO, 74560-550 / CNPJ: 03.783.850/0018-40</h3>
+        <br>
+        <h3>- Central de Atendimento -</h3>
+        <h3>Consultora de Vendas | Denyse: (62) 99821-4019</h3>
+        <h3>Engenheiro Técnico Responsável | Cícero: (62) 99942-3246</h3>
+        <br>
+        <figure>
+            <img class="imagens-site" id="imgIST" src="/img/IST-nova.png" alt="logo IST">
+        </figure>
+    </footer>
+</div>
+</body>
+</html>

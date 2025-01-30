@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="css/styleAgendamentos.css">
+    <title>Gerenciar Agendamentos</title>
+</head>
+
+<body>
+
+    <header>
+        <figure>
+            <img class="imagens-site" id="imgTopo" src="img/SENAI_2024-negativada.png" alt="Logo SENAI">
+            <img class="imagens-site" id="imgIST1" src="img/IST-nova.png" alt="logo IST">
+        </figure>
+    </header>
+
+    <section class="container">
+        <h1>Gerenciar Agendamentos</h1>
+
+        <label for="filtroEmpresa" class="filtro-label">Filtrar por Empresa:</label>
+        <select id="filtroEmpresa" class="filtro-select">
+            <option value="todas">Todas</option>
+            <!-- As opções serão preenchidas dinamicamente -->
+        </select>
+
+        <label for="filtroStatus" class="filtro-label">Filtrar por Status:</label>
+        <select id="filtroStatus" class="filtro-select">
+            <option value="todos">Todos</option>
+            <option value="Agendado">Agendado</option>
+            <option value="Pendente">Pendente</option>
+            <option value="Negado">Negado</option>
+        </select>
+
+        <div id="mensagemPermissao" class="mensagem-permissao" style="display: none; color: red;">
+            Sem permissões para manipular dados.
+        </div>     
+
+        <div id="agendamentos-container">
+            <!-- Os agendamentos serão adicionados aqui como cards -->
+        </div>
+    </section>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const userRole = /*[[${userRole}]]*/ 'ROLE_CLIENTE';
+        /*]]>*/
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById('filtroStatus').addEventListener('change', carregarAgendamentos);
+            document.getElementById('filtroEmpresa').addEventListener('change', carregarAgendamentos);
+
+            carregarEmpresas();
+            carregarAgendamentos();
+
+            const filtroStatus = document.getElementById('filtroStatus');
+            const filtroEmpresa = document.getElementById('filtroEmpresa');
+
+            filtroStatus.addEventListener('change', aplicarFiltro);
+            filtroEmpresa.addEventListener('change', aplicarFiltro);
+
+            // Carregar empresas no filtro
+            function carregarEmpresas() {
+                fetch('/api/agendamentos/empresas')
+                    .then(response => response.json())
+                    .then(empresas => {
+                        const filtroEmpresa = document.getElementById('filtroEmpresa');
+                        empresas.forEach(empresa => {
+                            const option = document.createElement('option');
+                            option.value = empresa.id;
+                            option.textContent = empresa.nomeEmpresa || empresa.nome || 'Sem nome'; // Verifica o campo correto
+                            filtroEmpresa.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Erro ao carregar empresas:', error));
+            }
+
+            function carregarAgendamentos() {
+                const filtroStatusValue = document.getElementById('filtroStatus').value;
+                const filtroEmpresaValue = document.getElementById('filtroEmpresa').value;
+
+                const url = new URL('/api/agendamentos/admin/agendamentos', window.location.origin);
+                if (filtroStatusValue !== 'todos') url.searchParams.append('status', filtroStatusValue);
+                if (filtroEmpresaValue !== 'todas') url.searchParams.append('empresaId', filtroEmpresaValue);
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(agendamentos => {
+                        const container = document.getElementById('agendamentos-container');
+                        container.innerHTML = ''; // Limpa o container
+
+                        agendamentos.forEach(agendamento => {
+                            const card = document.createElement('div');
+                            card.classList.add('agendamento-card');
+                            card.dataset.status = agendamento.status.toLowerCase();
+                            card.dataset.empresaId = agendamento.empresaId;
+                            card.innerHTML = `
+                                <div class="agendamento-info">
+                                    <span class="agendamento-label">Empresa:</span>
+                                    <span>${agendamento.nomeEmpresa}</span>
+                                </div>
+                                <div class="agendamento-info">
+                                    <span class="agendamento-label">Data:</span>
+                                    <span>${new Date(agendamento.dataHora).toLocaleDateString()}</span>
+                                </div>
+                                <div class="agendamento-info">
+                                    <span class="agendamento-label">Hora:</span>
+                                    <span>${new Date(agendamento.dataHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                                <div class="agendamento-info">
+                                    <span class="agendamento-label">Status:</span>
+                                    <select class="status-select" data-id="${agendamento.id}">
+                                        <option value="Pendente" ${agendamento.status === 'Pendente' ? 'selected' : ''}>Pendente</option>
+                                        <option value="Agendado" ${agendamento.status === 'Agendado' ? 'selected' : ''}>Agendado</option>
+                                        <option value="Negado" ${agendamento.status === 'Negado' ? 'selected' : ''}>Negado</option>
+                                    </select>
+                                </div>
+                                <div class="agendamento-actions">
+                                    <button class="atualizar-btn" data-id="${agendamento.id}">Atualizar</button>
+                                    <button class="excluir-btn" data-id="${agendamento.id}">Excluir</button>
+                                </div>
+                            `;
+                            container.appendChild(card);
+                        });
+
+                        // Adiciona eventos para os botões de status, atualizar e excluir
+                        document.querySelectorAll('.status-select').forEach(select => {
+                            // Desativar o select para usuários que não são administradores
+                            if (userRole !== 'ROLE_ADMIN') {
+                                select.disabled = true; // Desativa o select
+                                return; // Sai da função para evitar adicionar o listener
+                            }
+
+                            // Caso seja administrador, permite adicionar o evento de mudança
+                            select.addEventListener('change', function(event) {
+                                atualizarStatus(event);
+                            });
+                        });
+
+
+                        document.querySelectorAll('.atualizar-btn').forEach(button => {
+                            button.addEventListener('click', function(event) {
+                                if (validarPermissao(event, this)) { // Certifique-se de passar o evento
+                                    atualizarStatus(event);
+                                }
+                            });
+                        });
+
+                        document.querySelectorAll('.excluir-btn').forEach(button => {
+                            button.addEventListener('click', function(event) {
+                                if (validarPermissao(event, this)) { // Certifique-se de passar o evento
+                                    excluirAgendamento(event);
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => console.error('Erro ao carregar agendamentos:', error));
+            }
+
+
+            function validarPermissao(event, element) {
+                if (userRole !== 'ROLE_ADMIN') { // Verifica se o usuário não é ADMIN
+                    event.preventDefault(); // Impede a ação padrão
+                    exibirMensagemPermissao(); // Exibe a mensagem de permissão
+                    return false;
+                }
+                return true;
+            }
+
+            function exibirMensagemPermissao() {
+                const mensagemPermissao = document.getElementById('mensagemPermissao');
+                mensagemPermissao.style.display = 'block';
+                setTimeout(() => {
+                    mensagemPermissao.style.display = 'none';
+                }, 3000);
+            }
+   
+            function excluirAgendamento(event) {
+                const agendamentoId = event.target.getAttribute('data-id');
+
+                fetch(`/api/agendamentos/admin/agendamentos/${agendamentoId}`, {
+                    method: 'DELETE',
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text); });
+                    }
+                    return response.text();
+                })
+                .then(result => {
+                    alert('Agendamento excluído com sucesso!');
+                    carregarAgendamentos(); // Recarrega os agendamentos após a exclusão
+                })
+                .catch(error => {
+                    console.error("Erro ao excluir agendamento:", error);
+                    alert("Erro ao excluir o agendamento: " + error.message);
+                });
+            }
+
+            function atualizarStatus(event) {
+                const agendamentoId = event.target.getAttribute('data-id');
+                const selectElement = document.querySelector(`.status-select[data-id="${agendamentoId}"]`);
+                const novoStatus = selectElement.value;
+
+                fetch(`/api/agendamentos/admin/agendamentos/${agendamentoId}/status?status=${novoStatus}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text); });
+                    }
+                    return response.text();
+                })
+                .then(result => {
+                    alert('Status atualizado com sucesso!');
+                    carregarAgendamentos(); // Recarrega os agendamentos após a atualização
+                })
+                .catch(error => {
+                    console.error("Erro ao atualizar status:", error);
+                    alert("Erro ao atualizar o status: " + error.message);
+                });
+            }
+
+            function aplicarFiltro() {
+                const filtroStatusValue = filtroStatus.value.toLowerCase();
+                const filtroEmpresaValue = filtroEmpresa.value;
+
+                const cards = document.querySelectorAll('.agendamento-card');
+                cards.forEach(card => {
+                    const status = card.dataset.status;
+                    const empresaId = card.dataset.empresaId;
+
+                    const exibePorStatus = filtroStatusValue === 'todos' || status === filtroStatusValue;
+                    const exibePorEmpresa = filtroEmpresaValue === 'todas' || empresaId === filtroEmpresaValue;
+
+                    if (exibePorStatus && exibePorEmpresa) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+        });
+    </script>
+
+    <footer class="rodape">
+        <h3>R. Armogaste José da Silveira, 612 - St. Centro Oeste, Goiânia - GO, 74560-550 / CNPJ: 03.783.850/0018-40</h3>
+        <h3>- Central de Atendimento -</h3>
+        <h3>Consultora de Vendas | Denyse: (62) 99821-4019</h3>
+        <h3>Engenheiro Técnico Responsável | Cícero: (62) 99942-3246</h3>
+        <figure>
+            <img class="imagens-site" id="imgIST" src="img/IST-nova.png" alt="logo IST">
+        </figure>
+    </footer>
+
+</body>
+</html>

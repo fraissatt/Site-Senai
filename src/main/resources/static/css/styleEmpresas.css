@@ -1,0 +1,528 @@
+* {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: arial;
+    font-size: 62.5%;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Altura mínima da tela */
+    overflow-x: hidden;
+}
+
+.wrapper {
+    flex: 1; /* Faz o conteúdo principal crescer para ocupar o espaço disponível */
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: linear-gradient(to left, #87CEFA, #0047b6);
+    color: #fff;    
+    font-size: 1.8rem;
+    padding: 1rem;
+    padding-top: 1rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+.conteudo-topo {
+    font-size: 1.6rem;
+    background-color: #fff;
+    padding: 0.5rem;
+    margin: 0 auto;
+    text-align: justify;
+    max-width: 95%;
+    padding-top: 16rem;
+}
+
+@media (max-width: 495px) {
+    .conteudo-topo {
+        padding-top: 12rem;
+        font-size: 1.4rem;
+    }
+}
+
+.imagens-site {
+    border-radius: 20px;
+    width: 15%;
+    height: 15%;
+}
+
+@media (min-width: 280px) and (max-width: 440px) {
+    .imagens-site {
+        border-radius: 20px;
+        width: 30%;
+        height: 30%;
+    }
+}
+
+.wrapper #imgTopo {
+    margin-top: auto;
+    float: left;
+    margin-left: 20px;
+    display: block;
+}    
+
+.wrapper #imgIST1 {
+    float: right;
+    margin-right: 20px;
+    display: block;
+    padding-bottom: 4px;
+}
+
+footer {
+    background: linear-gradient(to bottom, #ADD8E6, #0047b6);
+    color: #000;
+    font-size: 1.8rem;
+    padding: 1rem;
+    text-align: center;
+    width: 100%;
+    margin-top: auto; /* Garante que o rodapé fique no fundo da página */
+}
+
+.rodape {
+    padding-top: 10px;
+    font-size: 1.2rem;
+    color: #fff;
+    width: 100%;
+}
+@media (min-width: 280px) and (max-width: 820px) {
+    .rodape {
+        font-size: 1rem;
+        text-align: center;
+    }
+}
+
+.rodape figure {
+    text-align: center;
+    padding-bottom: 1px;
+}
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.empresa-list {
+    margin: auto;
+    margin-top: 20px;
+    width: 90%;
+}
+
+.empresa-item {
+    font-size: 1.3rem;
+    display: flex; /* Use flexbox para centralizar os elementos */
+    flex-direction: column; /* Alinha os elementos em coluna */
+    align-items: center; /* Centraliza horizontalmente */
+    width: 100%; /* Ajuste a largura para 100% para melhor controle */
+    margin-bottom: 10px;
+    padding: 5px;
+    border: 1px solid #ccc;
+}
+
+.empresa-item .row {
+    display: flex; /* Use flexbox para alinhar os itens da linha */
+    width: 100%; /* Largura total da linha */
+    justify-content: center; /* Centraliza horizontalmente */
+}
+
+.empresa-item .cell {
+    background-color: #f2f2f2;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+    vertical-align: middle;
+    text-align: center; /* Centraliza o texto dentro das células */
+}
+
+.empresa-item .cell:first-child {
+    font-weight: bold;
+    width: 90%; /* Ajusta a largura automaticamente */
+    text-align: center;
+}
+
+.empresa-item .cell:last-child {
+    border-bottom: none; /* Remove a borda inferior da última linha */
+    width: 90%; /* Ajusta a largura automaticamente */
+    text-align: left;
+}    
+
+.modal {
+    display: none;
+    font-size: 1.3rem;
+    position: fixed;
+    z-index: 1;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding-top: auto;
+    border-radius: 20px;
+}
+@media (min-width: 280px) and (max-width: 720px) {
+    .modal {
+        padding-top: 10rem;
+        border-radius: 20px;
+    }
+}
+
+.modal-content {
+    background-color: #fefefe;
+    text-align: center;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 50%;
+    position: fixed;
+    top: 50%; /* Centraliza verticalmente */
+    left: 50%; /* Centraliza horizontalmente */
+    transform: translate(-50%, -50%); /* Ajusta para ficar perfeitamente no centro */
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 1000; /* Garante que fique acima de outros elementos */
+}
+
+@media (min-width: 280px) and (max-width: 720px) {
+    .modal-content {
+        width: 80%; /* Ajusta a largura para telas menores */
+        padding: 15px; /* Reduz o padding */
+        border-radius: 20px;
+    }
+}
+
+.form-group {
+    margin-bottom: 7px;
+    text-align: center;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    text-align: center;
+    font-weight: bold; /* Negrito */
+    font-size: 1.2rem; /* Ajuste de tamanho */
+    color: #0056b3; /* Azul escuro */
+}
+
+.form-group input {
+    background-color: #f2f2f2; /* Cor de fundo cinza claro */
+    color: #000; /* Cor do texto */
+    border: 1px solid #ccc; /* Borda leve */
+    border-radius: 4px; /* Bordas arredondadas */
+    padding: 5px; /* Espaçamento interno */
+    font-size: 1.3rem; /* Tamanho da fonte */
+    width: 70%;
+    text-align: center;
+}
+@media (min-width: 280px) and (max-width: 940px) {
+    .form-group input {
+        width: 70%;
+    }
+}
+
+/* Estilização do select */
+.form-group select {
+    background-color: #ffffff; /* Fundo branco */
+    border: 2px solid #0056b3; /* Borda azul */
+    color: #0056b3; /* Texto azul */
+    border-radius: 8px; /* Bordas arredondadas */
+    padding: 5px; /* Espaçamento interno */
+    font-size: 1.2rem; /* Tamanho do texto */
+    width: 30%; /* Largura do select */
+    margin: 0 auto; /* Centraliza */
+    text-align: center; /* Centraliza o texto (para aparência consistente) */
+    appearance: none; /* Remove estilo padrão do navegador */
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); /* Sombra leve */
+    cursor: pointer; /* Ícone de cursor ao passar o mouse */
+}
+
+/* Ajuste do ícone dropdown no select */
+.form-group select:focus {
+    outline: none; /* Remove o contorno padrão ao focar */
+    border-color: #003d82; /* Cor de borda ao focar */
+    box-shadow: 0 0 5px #003d82; /* Sombra azul ao focar */
+}
+
+@media (min-width: 280px) and (max-width: 720px) {
+    .form-group select {
+        width: 45%; /* Aumenta a largura do select para telas pequenas */
+        font-size: 1rem; /* Reduz tamanho do texto */
+    }
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover, .close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#salvarEmpresa-btn,
+.editar-btn,
+.pdfs-btn {
+    font-size: 1.3rem;
+    padding: 1.8px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#salvarEmpresa-btn {
+    background-color: #0047b6;
+    color: #fff;
+    margin-top: 5px;
+}
+
+#salvarEmpresa-btn:hover {
+    background-color: #003a8c;
+}
+
+#buscaEmpresa {
+    width: 50%;
+    padding: 10px;
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    color: white;
+    background-color: #007bff;
+}
+
+.button-group {
+    display: flex;
+    justify-content: center; /* Centraliza os botões no centro da célula */
+    gap: 20px; /* Espaçamento entre os botões */
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.editar-btn {
+    padding: 10px 20px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    color: white;
+    background-color: #007bff;
+    display: block; /* Garante que o botão ocupe a largura total disponível */
+    margin: 10px auto; /* Centraliza o botão horizontalmente */
+    text-align: center; /* Centraliza o texto dentro do botão */
+}
+.editar-btn:hover {
+    background-color: #0056b3;
+}
+
+
+#excluirEmpresa-btn {
+    font-size: 1.3rem;
+    padding: 1.8px;
+    background-color: #ff0000;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#excluirEmpresa-btn:hover {
+    background-color: #cc0000;
+}
+
+.pdfs-btn {
+    padding: 10px 20px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+    color: white;
+    background-color: #00FA9A;
+    display: block; /* Garante que o botão ocupe a largura total disponível */
+    margin: 10px auto; /* Centraliza o botão horizontalmente */
+    text-align: center; /* Centraliza o texto dentro do botão */
+}
+
+.pdfs-btn:hover {
+    background-color: #32CD32; /* Cor verde escura para hover */
+}
+
+.mensagem-permissao {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #ffcccc;
+    color: #cc0000;
+    padding: 15px 25px;
+    border: 1px solid #cc0000;
+    border-radius: 8px;
+    font-weight: bold;
+    z-index: 2000;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    font-size: 12px;
+    transition: opacity 0.5s ease;
+  }
+  
+  .paginacao {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.paginacao button {
+    margin: 0 5px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    background-color: #f4f4f4;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.paginacao button:hover:not([disabled]) {
+    background-color: #ddd;
+}
+
+.paginacao button[disabled] {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Envolvendo o modal com o seletor .empresas-modal */
+.empresas-modal .card {
+    overflow: hidden;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #DC2626;
+    text-align: left;
+    border-radius: 0.5rem;
+    max-width: 290px;
+    box-shadow: 10px 20px 25px -5px rgba(0, 0, 0, 0.668), 0 10px 10px -5px rgba(0, 0, 0, 0.444);
+    z-index: 1000;
+}
+
+.empresas-modal .header {
+    padding: 1.25rem 1rem 1rem 1rem;
+    background-color: #ffffff;
+}
+
+.empresas-modal .image {
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #FEE2E2;
+    flex-shrink: 0;
+    justify-content: center;
+    align-items: center;
+    width: 5rem;
+    height: 5rem;
+    border-radius: 9999px;
+}
+
+.empresas-modal .image svg {
+    color: #DC2626;
+    width: 3rem;
+    height: 3rem;
+}
+
+.empresas-modal .content {
+    margin-top: 0.75rem;
+    text-align: center;
+}
+
+.empresas-modal .title {
+    color: #111827;
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.5rem;
+}
+
+.empresas-modal .message {
+    margin-top: 0.5rem;
+    color: #6B7280;
+    font-size: 1rem;
+    line-height: 1.25rem;
+}
+
+.empresas-modal .actions {
+    margin: 0.75rem 1rem;
+    background-color: #F9FAFB;
+}
+
+.empresas-modal .desactivate {
+    display: inline-flex;
+    padding: 0.5rem 1rem;
+    background-color: #DC2626;
+    color: #ffffff;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: bold;
+    justify-content: center;
+    width: 100%;
+    border-radius: 0.375rem;
+    border-width: 1px;
+    border-color: transparent;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: background-color 0.3s ease;
+}
+
+.empresas-modal .desactivate:hover {
+    background-color: #B91C1C;
+}
+
+.empresas-modal .cancel {
+    display: inline-flex;
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    background-color: #ffffff;
+    color: #374151;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 500;
+    justify-content: center;
+    width: 100%;
+    border-radius: 0.375rem;
+    border: 1px solid #D1D5DB;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.empresas-modal .cancel:hover {
+    background-color: #ffffff;
+    color: #374151;
+}

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="css/styleUsers.css">
+    <title>Gerenciar Usuários</title>
+</head>
+
+<body>
+<div class="wrapper">
+    <header>
+        <br>
+        <figure>
+            <img class="imagens-site" id="imgTopo" src="img/SENAI_2024_completa_negativada.png" alt="Logo SENAI">
+            <img class="imagens-site" id="imgIST1" src="img/IST-nova.png" alt="logo IST">
+        </figure>
+    </header>
+
+    <section class="conteudo-topo">
+        <h1>Gerenciar Usuário</h1>
+    </section>
+    
+
+    <div class="container">
+        <h1>Buscar</h1>
+        <br>
+        <input type="text" id="buscaUsuario" placeholder="Buscar usuário pelo nome..." onkeyup="buscarUsuario()">
+        <br>
+        <div id="mensagemPermissao" class="mensagem-permissao" style="display: none; color: red;">
+            Sem permissões para manipular dados.
+        </div>
+        <div class="form-group">
+            <label for="filtroEmpresa">Filtrar por Empresa</label>
+            <select id="filtroEmpresa" onchange="filtrarUsuariosPorEmpresa()">
+                <option value="">Todas as Empresas</option>
+                <!-- As opções de empresas serão carregadas dinamicamente -->
+            </select>
+        </div>
+        <!-- Botão de Adicionar Usuário (exibido apenas para ROLE_ADMIN) -->
+        <button id="adicionarUsuarioBtn" onclick="abrirModal()">Adicionar Usuário</button>
+        <div class="usuario-list" id="usuario-list">
+            <!-- Usuários serão listados aqui -->
+        </div>
+        <div id="paginacao" class="paginacao">
+            <!-- Botões de paginação serão inseridos aqui via JavaScript -->
+        </div>
+    </div>
+
+    <div id="mensagemSucesso" class="mensagem-sucesso" style="display: none;">
+        Usuário atualizado com sucesso!
+    </div>
+
+    <!-- Modal para adicionar/editar usuário -->
+    <div id="modalAdicionarUsuario" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal()">&times;</span>
+            <h2>Adicionar Usuário</h2>
+            <br>
+            <div class="form-group">
+                <label for="nomeUsuario">Nome</label>
+                <input type="text" id="nomeUsuario" name="nomeUsuario" required>
+            </div>
+            <div class="form-group">
+                <label for="emailUsuario">Email</label>
+                <input type="email" id="emailUsuario" name="emailUsuario" required>
+            </div>
+            <div class="form-group">
+                <label for="senhaUsuario">Senha</label>
+                <input type="password" id="senhaUsuario" name="senhaUsuario" required>
+            </div>
+            <div class="form-group">
+                <label for="empresaUsuario">Empresa</label>
+                <select id="empresaUsuario" name="empresaUsuario" required>
+                    <option value="">Selecione a empresa</option>
+                    <!-- As opções de empresas serão adicionadas aqui via JavaScript -->
+                </select>
+            </div>         
+            <div class="form-group">
+                <label for="roleUsuario">Role</label>
+                <select id="roleUsuario" name="roleUsuario" required>
+                    <option value="">Selecione o tipo de usuário</option>
+                    <option value="ROLE_ADMIN">Administrador</option>
+                    <option value="ROLE_CLIENTE">Cliente</option>
+                    <option value="ROLE_STAKEHOLDER">Stakeholder</option>
+                </select>
+            </div>   
+            <div class="modal-buttons">
+                <button id="salvarUsuario-btn" onclick="salvarOuAtualizarUsuario()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal de Confirmação -->
+    <div id="modalConfirmacao" class="card" style="display: none;">
+        <div class="header">
+            <div class="image"> 
+                <svg aria-hidden="true" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" stroke-linejoin="round" stroke-linecap="round"></path>
+                </svg>
+            </div>
+            <div class="content">
+                <span class="title">Confirmar Exclusão</span>
+                <p class="message">Tem certeza de que deseja excluir este usuário? Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="actions">
+                <button class="desactivate" id="confirmarExclusao">Confirmar</button>
+                <button class="cancel" id="cancelarExclusao">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const userRole = /*[[${userRole}]]*/ 'ROLE_CLIENTE';
+        /*]]>*/
+    </script>
+    <script>
+        let usuarioEditando = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            carregarUsuarios(0, 30);
+            carregarEmpresas();
+
+            const roleUsuario = document.getElementById('roleUsuario');
+            roleUsuario.addEventListener("change", () => {
+                const empresaUsuario = document.getElementById('empresaUsuario');
+                if (roleUsuario.value === "ROLE_ADMIN") {
+                    empresaUsuario.closest(".form-group").style.display = "none";
+                    empresaUsuario.value = ""; // Reseta o valor selecionado
+                } else {
+                    empresaUsuario.closest(".form-group").style.display = "block";
+                }
+            });
+
+            const adicionarUsuarioBtn = document.getElementById('adicionarUsuarioBtn');
+            if (userRole === 'ROLE_ADMIN' && adicionarUsuarioBtn) {
+                adicionarUsuarioBtn.style.display = 'inline-block';
+            } else if (adicionarUsuarioBtn) {
+                adicionarUsuarioBtn.style.display = 'none';
+            }
+        });
+
+        function abrirModal(isEdit = false) {
+            document.getElementById('modalAdicionarUsuario').style.display = 'block';
+
+            const nomeUsuario = document.getElementById('nomeUsuario');
+            const emailUsuario = document.getElementById('emailUsuario');
+            const senhaUsuario = document.getElementById('senhaUsuario');
+            const empresaUsuario = document.getElementById('empresaUsuario');
+            const roleUsuario = document.getElementById('roleUsuario');
+
+            if (!isEdit) {
+                // Modal de criação
+                usuarioEditando = null;
+                nomeUsuario.value = '';
+                emailUsuario.value = '';
+                senhaUsuario.value = '';
+                empresaUsuario.value = '';
+                roleUsuario.value = '';
+
+                // Verifica se o select de empresas já foi preenchido
+                if (!empresaUsuario.options.length) {
+                    carregarEmpresas();
+                }
+
+            } else if (usuarioEditando) {
+                // Modal de edição
+                nomeUsuario.value = usuarioEditando.querySelector('.row:nth-child(1) .cell:nth-child(2)').textContent.trim();
+                emailUsuario.value = usuarioEditando.querySelector('.row:nth-child(2) .cell:nth-child(2)').textContent.trim();
+                senhaUsuario.value = ''; // Não preencher senha
+
+                const empresaId = usuarioEditando.getAttribute('data-empresa-id');
+                const role = usuarioEditando.getAttribute('data-role');
+
+                roleUsuario.value = role;
+
+                // Esconde o campo de empresa para ROLE_ADMIN ao editar
+                if (role === "ROLE_ADMIN") {
+                    empresaUsuario.closest(".form-group").style.display = "none";
+                    empresaUsuario.value = ""; // Limpa o campo
+                } else {
+                    empresaUsuario.closest(".form-group").style.display = "block";
+
+                    // Verifica se o select de empresas já foi preenchido
+                    if (!empresaUsuario.options.length) {
+                        carregarEmpresas(() => {
+                            empresaUsuario.value = empresaId || '';
+                        });
+                    } else {
+                        empresaUsuario.value = empresaId || '';
+                    }
+                }
+            }
+        }
+
+        function carregarUsuarios(page = 0, size = 30) {
+            fetch(`/login/users?page=${page}&size=${size}`)
+                .then(response => response.json())
+                .then(data => {
+                    const usuarios = data.content || data; // Obtém a lista de usuários paginada
+                    const totalPages = data.totalPages; // Obtém o total de páginas
+                    const currentPage = data.number; // Página atual
+
+                    const usuarioList = document.getElementById('usuario-list');
+                    usuarioList.innerHTML = ''; // Limpa a lista existente
+
+                    usuarios.forEach(usuario => {
+                        adicionarUsuarioNaLista(usuario);
+                    });
+
+                    // Atualizar os botões de paginação
+                    atualizarPaginacao(totalPages, currentPage);
+                })
+                .catch(error => console.error('Erro ao carregar usuários:', error));
+        }
+
+        function atualizarPaginacao(totalPages, currentPage) {
+            const paginacaoContainer = document.getElementById('paginacao');
+            paginacaoContainer.innerHTML = ''; // Limpar botões antigos
+
+            for (let i = 0; i < totalPages; i++) {
+                const button = document.createElement('button');
+                button.textContent = i + 1; // Exibe a página (começa em 1)
+                button.disabled = i === currentPage; // Desabilita o botão da página atual
+                button.onclick = () => carregarUsuarios(i); // Carregar a página correspondente
+                paginacaoContainer.appendChild(button);
+            }
+        }
+
+
+        function exibirMensagemPermissao() {
+            const mensagemPermissao = document.getElementById('mensagemPermissao');
+            mensagemPermissao.style.display = 'block';
+            setTimeout(() => {
+                mensagemPermissao.style.display = 'none';
+            }, 3000); // Oculta a mensagem após 3 segundos
+        }
+
+        function verificarEmailDuplicado(email) {
+            return fetch(`/login/users/verificar-email?email=${encodeURIComponent(email)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao verificar e-mail.');
+                    }
+                    return response.json(); // Retorna true se o e-mail já existir
+                });
+        }
+
+        function salvarOuAtualizarUsuario() {
+            const nomeUsuario = document.getElementById('nomeUsuario').value;
+            const emailUsuario = document.getElementById('emailUsuario').value;
+            const senhaUsuario = document.getElementById('senhaUsuario').value;
+            const empresaId = document.getElementById('empresaUsuario').value;
+            const role = document.getElementById('roleUsuario').value;
+
+            if (!nomeUsuario || !emailUsuario || (role !== "ROLE_ADMIN" && !empresaId)) {
+                alert('Preencha todos os campos obrigatórios.');
+                return;
+            }
+
+            const usuario = {
+                nome: nomeUsuario,
+                email: emailUsuario,
+                senha: senhaUsuario || null,
+                empresaId: role === "ROLE_ADMIN" ? null : empresaId,
+                role: role
+            };
+
+            if (usuarioEditando) {
+                const userId = usuarioEditando.getAttribute('data-user-id');
+                fetch(`/login/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(usuario)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 409) {
+                                throw new Error('E-mail já está em uso por outro usuário.');
+                            }
+                            throw new Error('Erro ao atualizar o usuário');
+                        }
+                        return response.text();
+                    })
+                    .then(() => {
+                        exibirMensagemSucesso("Usuário atualizado com sucesso");
+                        fecharModal();
+                        carregarUsuarios();
+                    })
+                    .catch(error => alert(error.message));
+            } else {
+                fetch('/login/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(usuario)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 409) {
+                                throw new Error('E-mail já está em uso.');
+                            }
+                            throw new Error('Erro ao criar o usuário');
+                        }
+                        return response.text();
+                    })
+                    .then(() => {
+                        exibirMensagemSucesso("Usuário cadastrado com sucesso");
+                        fecharModal();
+                        carregarUsuarios();
+                    })
+                    .catch(error => alert(error.message));
+            }
+        }
+
+        function fecharModal() {
+            const modal = document.getElementById('modalAdicionarUsuario');
+            modal.style.display = 'none';
+            limparCampos();
+        }
+
+        function adicionarUsuarioNaLista(usuario) {
+            const usuarioList = document.getElementById('usuario-list');
+            const usuarioItem = document.createElement('div');
+            usuarioItem.classList.add('usuario-item');
+            usuarioItem.setAttribute('data-user-id', usuario.id);
+            usuarioItem.setAttribute('data-empresa-id', usuario.empresaId || ''); // Define o ID da empresa
+            usuarioItem.setAttribute('data-role', usuario.role || ''); // Define a role do usuário
+
+            usuarioItem.innerHTML = `
+                <div class="row">
+                    <div class="cell">Nome:</div>
+                    <div class="cell">${usuario.nome}</div>
+                </div>
+                <div class="row">
+                    <div class="cell">Email:</div>
+                    <div class="cell">${usuario.email}</div>
+                </div>
+                <div class="row">
+                    <div class="cell">Empresa:</div>
+                    <div class="cell">${usuario.empresa}</div>
+                </div>
+                <div class="button-group">
+                    <button class="editar-btn" onclick="editarUsuario(this)">Editar</button>
+                    <button class="remove-btn" onclick="excluirUsuario(this)">Excluir</button>
+                </div>
+            `;
+            usuarioList.appendChild(usuarioItem);
+        }
+
+        function exibirMensagemSucesso(mensagem) {
+            const mensagemSucesso = document.getElementById('mensagemSucesso');
+
+            if (!mensagemSucesso) {
+                console.error("Elemento mensagemSucesso não encontrado.");
+                return;
+            }
+
+            mensagemSucesso.textContent = mensagem;
+            mensagemSucesso.style.display = 'block';  // Tornar visível
+
+            // Fade out após 3 segundos
+            setTimeout(() => {
+                mensagemSucesso.classList.add('fade-out');
+            }, 3000);
+
+            // Remover a classe fade-out e ocultar após a transição
+            setTimeout(() => {
+                mensagemSucesso.style.display = 'none';
+                mensagemSucesso.classList.remove('fade-out');
+            }, 3500);
+        }
+    
+
+        function editarUsuario(button) {
+            if (userRole === 'ROLE_ADMIN') {
+                usuarioEditando = button.closest('.usuario-item');
+
+                // Adicionar atributos ao item, caso não existam
+                const empresaId = usuarioEditando.getAttribute('data-empresa-id');
+                const role = usuarioEditando.getAttribute('data-role');
+
+                // Validar apenas para usuários que não sejam administradores
+                if (role !== 'ROLE_ADMIN' && (!empresaId || !role)) {
+                    console.error("Dados insuficientes para edição do usuário.");
+                    return;
+                }
+
+                abrirModal(true);
+            } else {
+                exibirMensagemPermissao();
+            }
+        }
+        
+        let usuarioParaExcluir = null; // Variável para armazenar o usuário a ser excluído
+
+
+        function abrirModalConfirmacao(usuario) {
+            usuarioParaExcluir = usuario;
+            document.getElementById('modalConfirmacao').style.display = 'block';
+        }
+
+        function confirmarExclusao() {
+            if (!usuarioParaExcluir) return;
+
+            const userId = usuarioParaExcluir.getAttribute('data-user-id');
+            fetch(`/login/users/${userId}`, { method: 'DELETE' })
+                .then(response => {
+                    if (!response.ok) throw new Error(`Erro ao excluir usuário com ID: ${userId}`);
+                    usuarioParaExcluir.remove();
+                    fecharModalConfirmacao();
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Não foi possível excluir o usuário. Tente novamente.');
+                });
+        }
+
+        function fecharModalConfirmacao() {
+            usuarioParaExcluir = null;
+            document.getElementById('modalConfirmacao').style.display = 'none';
+        }
+
+        document.getElementById('cancelarExclusao').onclick = fecharModalConfirmacao;
+        document.getElementById('confirmarExclusao').onclick = confirmarExclusao;
+
+
+        function excluirUsuario(button) {
+            if (userRole === 'ROLE_ADMIN') {
+                const usuario = button.closest('.usuario-item');
+                abrirModalConfirmacao(usuario);
+            } else {
+                exibirMensagemPermissao(); // Mostra a mensagem de permissão
+                console.error("Ação não permitida. Somente ADMIN pode excluir usuários.");
+            }
+        }
+
+        function buscarUsuario() {
+            const termoBusca = document.getElementById('buscaUsuario').value.trim();
+
+            if (!termoBusca) {
+                carregarUsuarios(0, 30); 
+                return;
+            }
+
+            fetch(`/login/users/buscar?termo=${encodeURIComponent(termoBusca)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro ao buscar usuários: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(usuarios => {
+                    const usuarioList = document.getElementById('usuario-list');
+                    usuarioList.innerHTML = ''; // Limpa a lista existente
+
+                    usuarios.forEach(usuario => {
+                        adicionarUsuarioNaLista(usuario);
+                    });
+                })
+                .catch(error => console.error('Erro ao buscar usuários:', error));
+        }
+
+        function preencherSelect(selectElement, empresas, defaultOption) {
+            selectElement.innerHTML = `<option value="">${defaultOption}</option>`;
+            empresas.forEach(empresa => {
+                const option = document.createElement('option');
+                option.value = empresa.id;
+                option.textContent = empresa.nomeEmpresa;
+                selectElement.appendChild(option);
+            });
+        }
+
+        function carregarEmpresas(callback) {
+            fetch('/api/empresas/todas')
+                .then(response => response.json())
+                .then(empresas => {
+                    const empresaSelect = document.getElementById('empresaUsuario');
+                    const filtroEmpresa = document.getElementById('filtroEmpresa');
+
+                    preencherSelect(empresaSelect, empresas, "Selecione a empresa");
+                    preencherSelect(filtroEmpresa, empresas, "Todas as Empresas");
+
+                    if (callback) {
+                        callback();
+                    }
+                })
+                .catch(error => console.error('Erro ao carregar empresas:', error));
+        }
+
+        function filtrarUsuariosPorEmpresa() {
+            const empresaId = document.getElementById('filtroEmpresa').value;
+
+            const url = empresaId
+                ? `/login/users?page=0&size=30&empresaId=${empresaId}`
+                : `/login/users?page=0&size=30`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const usuarios = data.content || data; // Obtém a lista de usuários paginada
+                    const totalPages = data.totalPages; // Obtém o total de páginas
+                    const currentPage = data.number; // Página atual
+
+                    const usuarioList = document.getElementById('usuario-list');
+                    usuarioList.innerHTML = ''; // Limpa a lista existente
+
+                    usuarios.forEach(usuario => {
+                        adicionarUsuarioNaLista(usuario);
+                    });
+
+                    // Atualizar os botões de paginação
+                    atualizarPaginacao(totalPages, currentPage);
+                })
+                .catch(error => console.error('Erro ao filtrar usuários:', error));
+        }
+
+        function limparCampos() {
+            document.getElementById('nomeUsuario').value = '';
+            document.getElementById('emailUsuario').value = '';
+            document.getElementById('senhaUsuario').value = '';
+            document.getElementById('empresaUsuario').value = '';
+        }
+    </script>
+
+    <footer class="rodape">
+        <br>
+        <h3>R. Armogaste José da Silveira, 612 - St. Centro Oeste, Goiânia - GO, 74560-550 / CNPJ: 03.783.850/0018-40</h3>
+        <br>
+        <h3>- Central de Atendimento -</h3>
+        <h3>Consultora de Vendas | Denyse: (62) 99821-4019</h3>
+        <h3>Engenheiro Técnico Responsável | Cícero: (62) 99942-3246</h3>
+        <br>
+
+        <figure>
+            <img class="imagens-site" id="imgIST" src="img/IST-nova.png" alt="logo IST">
+        </figure>
+    </footer>
+</div>
+</body>
+</html>

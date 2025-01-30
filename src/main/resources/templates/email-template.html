@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Notificação de Empresa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            color: #0056b3;
+        }
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .footer {
+            font-size: 12px;
+            color: #777777;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Olá, [[${nomeEmpresa}]]!</h2>
+
+        <p>Este é um lembrete de que há uma notificação de relatório prestes a vencer relacionado à sua empresa.</p>
+
+        <p>Caso tenha dúvidas, entre em contato com nossa equipe de suporte.</p>
+
+        <p>Atenciosamente,<br>Equipe de Suporte</p>
+
+        <div class="footer">
+            <p>Esta é uma mensagem automática, por favor, não responda a este e-mail.</p>
+        </div>
+    </div>
+</body>
+</html>

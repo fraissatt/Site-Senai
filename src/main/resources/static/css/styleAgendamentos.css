@@ -1,0 +1,290 @@
+* {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  font-size: 62.5%;
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+header {
+  background: linear-gradient(to left, #87CEFA, #0047b6);
+  padding: 1rem 1.3rem;
+  position: fixed;
+  width: 100%;
+  z-index: 1000;
+}
+
+.container {
+  width: 80%;
+  margin: 0 auto;
+  padding: 14rem 0;
+  text-align: center;
+  flex: 1;
+}
+
+footer {
+  background: linear-gradient(to bottom, #ADD8E6, #0047b6);
+  font-size: 1.8rem;
+  padding: 1rem;
+  text-align: center;
+  width: 100%;
+  position: relative;
+  bottom: 0;
+  left: 0;
+  z-index: 1000;
+  color: #fff;
+}
+
+.rodape {
+  font-size: 1.2rem;
+  width: 100%;
+  text-align: center;
+}
+
+.imagens-site {
+  border-radius: 20px;
+  width: 12%;
+  height: 12%;
+}
+
+@media (min-width: 280px) and (max-width: 480px) {
+  .imagens-site {
+    border-radius: 20px;
+    width: 30%;
+    height: 30%;
+  }
+}
+
+#imgIST1 {
+  float: right;
+  margin-right: 20px;
+}
+
+/* Container dos cards */
+#agendamentos-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin: 20px;
+  padding: 0;
+}
+
+/* Estilo dos cards de agendamento */
+.agendamento-card {
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  text-align: center;
+}
+
+/* Animação ao passar o mouse */
+.agendamento-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.agendamento-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.agendamento-actions button {
+  padding: 10px 15px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: bold;
+}
+
+/* Estilo para as informações do agendamento */
+.agendamento-info {
+  display: -moz-inline-grid;
+  flex-direction: column;
+  gap: 10px;
+  font-weight: bold;
+  color: #0047b6;
+  font-size: medium;
+  text-align: center;
+}
+
+.agendamento-actions .atualizar-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+.agendamento-actions .atualizar-btn:hover {
+  background-color: #0056b3;
+}
+
+.agendamento-actions .excluir-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.agendamento-actions .excluir-btn:hover {
+  background-color: #a71d2a;
+}
+
+/* Estilo para o select de status */
+.status-select {
+  padding: 10px;
+  border-radius: 5px;
+  width: 100%;
+  max-width: 150px; /* Define um tamanho máximo */
+  border: 1px solid #0047b6;
+  background-color: #ffffffea;
+  color: #0047b6;
+  font-weight: bold;
+  text-align: center;
+  align-items: center;
+  margin: auto;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 150px) {
+  .status-select {
+    width: 100%;
+    text-align: center;
+    align-items: center;
+  }
+
+  .agendamento-info {
+    align-items: flex-start; /* Alinha à esquerda no mobile */
+  }
+
+}
+
+/* Filtro */
+.filtro-label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.filtro-select {
+  width: 100%;
+  max-width: 200px; /* Define um tamanho máximo */
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  border: 1px solid #0047b6;
+  background-color: #f0f0f0;
+  color: #0047b6;
+  text-align: center;
+  font-weight: bold;
+  transition: background-color 0.3s, color 0.3s;
+  align-items: center;
+}
+
+.filtro-select:hover {
+  background-color: #0047b6;
+  font-weight: bold;
+  color: white;
+}
+
+/* Estilo para dispositivos móveis */
+@media (max-width: 560px) {
+  .agendamento-card {
+    width: 95%; /* Quase toda a largura no mobile */
+    padding: 15px;
+  }
+
+  .atualizar-btn,
+  .excluir-btn {
+    width: 100%; /* Botões ocupam 100% da largura no mobile */
+    margin: 5px 0;
+  }
+}
+
+.mensagem-permissao {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #ffcccc;
+  color: #cc0000;
+  font-weight: bold;
+  padding: 15px 25px;
+  border: 1px solid #cc0000;
+  border-radius: 8px;
+  font-weight: bold;
+  z-index: 2000;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  font-size: 12px;
+}
+
+/* Estilo responsivo para dispositivos móveis */
+@media (max-width: 420px) {
+  body {
+    font-size: 1.4rem;
+  }
+
+  .container {
+    width: 95%;
+    padding: 12rem 0 2rem;
+  }
+
+  #agendamentos-container {
+    grid-template-columns: 1fr; /* Cards ocupam toda a largura no mobile */
+    gap: 15px; /* Reduz o espaço entre os cards */
+  }
+
+  .agendamento-card {
+    padding: 8px;
+    font-size: 1.2rem; /* Texto menor para melhor adaptação */
+    align-items: center;
+    text-align: center;
+  }
+
+  .agendamento-info {
+    flex-direction: column; /* Alinha as informações em coluna */
+    text-align: center; /* Informações alinhadas à esquerda */
+  }
+
+  .agendamento-actions {
+    flex-direction: column; /* Botões empilhados no mobile */
+    gap: 5px; /* Reduz o espaço entre botões */
+  }
+
+  .agendamento-actions button {
+    width: 100%; /* Botões ocupam toda a largura */
+  }
+
+  .status-select {
+    max-width: 100%; /* Ajusta o tamanho ao container */
+    margin-bottom: 10px;
+  }
+
+  .filtro-label, .filtro-select {
+    text-align: center;
+    font-size: 1.4rem; /* Texto maior para facilitar leitura */
+  }
+
+  footer {
+    font-size: 1.2rem; /* Reduz o tamanho do texto no rodapé */
+  }
+}
